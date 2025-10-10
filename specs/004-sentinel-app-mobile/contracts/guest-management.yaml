@@ -1,0 +1,330 @@
+openapi: 3.0.3
+info:
+  title: Guest Management API
+  description: API contract for guest entry verification, pre-registration checks, and household verification
+  version: 1.0.0
+
+servers:
+  - url: https://{project-id}.supabase.co/functions/v1
+    variables:
+      project-id:
+        default: your-project-id
+
+paths:
+  /guests/search-preregistered:
+    get:
+      summary: Search pre-registered guests
+      description: Search for pre-registered guests by name or household for current date
+      operationId: searchPreRegisteredGuests
+      tags:
+        - Guest Management
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: search_query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Guest name or household address to search
+        - name: visit_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Visit date (defaults to current date)
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PreRegisteredGuest'
+                  total_count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /guests/verify-entry:
+    post:
+      summary: Verify and log guest entry
+      description: Verify guest identity and create entry log
+      operationId: verifyGuestEntry
+      tags:
+        - Guest Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - guest_name
+                - household_id
+                - guard_id
+                - verification_method
+              properties:
+                guest_name:
+                  type: string
+                household_id:
+                  type: string
+                  format: uuid
+                guard_id:
+                  type: string
+                  format: uuid
+                purpose:
+                  type: string
+                verification_method:
+                  type: string
+                  enum: [pre_registered, household_call, manual]
+                pre_registration_id:
+                  type: string
+                  format: uuid
+                  description: Required if verification_method is 'pre_registered'
+                  nullable: true
+                household_contacted:
+                  type: boolean
+                  description: Whether household head was called
+                household_response:
+                  type: string
+                  description: Response from household if contacted
+                  nullable: true
+                vehicle_plate:
+                  type: string
+                  nullable: true
+                guest_contact:
+                  type: string
+                  nullable: true
+                notes:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: Guest entry logged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  entry_log_id:
+                    type: string
+                    format: uuid
+                  guest_log_id:
+                    type: string
+                    format: uuid
+                  verification_result:
+                    type: string
+                    enum: [granted, denied]
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /guests/household-call:
+    post:
+      summary: Request household verification
+      description: Trigger call to household head for guest verification
+      operationId: requestHouseholdVerification
+      tags:
+        - Guest Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - household_id
+                - guest_name
+                - guard_id
+              properties:
+                household_id:
+                  type: string
+                  format: uuid
+                guest_name:
+                  type: string
+                guard_id:
+                  type: string
+                  format: uuid
+                guest_purpose:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Household contact initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  call_initiated:
+                    type: boolean
+                  household_contact:
+                    type: string
+                    description: Phone number called
+                  message:
+                    type: string
+                  pending_approval_id:
+                    type: string
+                    format: uuid
+                    description: ID for tracking approval status
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Household not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Household not found"
+
+  /guests/exit:
+    post:
+      summary: Log guest exit
+      description: Record guest exit time and calculate visit duration
+      operationId: logGuestExit
+      tags:
+        - Guest Management
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - guest_log_id
+                - guard_id
+              properties:
+                guest_log_id:
+                  type: string
+                  format: uuid
+                guard_id:
+                  type: string
+                  format: uuid
+                exit_timestamp:
+                  type: string
+                  format: date-time
+                  description: Defaults to current time if not provided
+      responses:
+        '200':
+          description: Guest exit logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  guest_log_id:
+                    type: string
+                    format: uuid
+                  exit_timestamp:
+                    type: string
+                    format: date-time
+                  visit_duration_minutes:
+                    type: integer
+                  message:
+                    type: string
+        '404':
+          description: Guest log not found
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    PreRegisteredGuest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guest_name:
+          type: string
+        guest_contact:
+          type: string
+          nullable: true
+        household:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            address:
+              type: string
+            resident_name:
+              type: string
+            contact:
+              type: string
+        visit_date:
+          type: string
+          format: date
+        expected_time:
+          type: string
+          format: time
+          nullable: true
+        purpose:
+          type: string
+        vehicle_plate:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, arrived, cancelled, expired]
+        created_at:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Authentication required"
+
+tags:
+  - name: Guest Management
+    description: Guest verification and entry logging operations
