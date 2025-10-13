@@ -30,9 +30,16 @@ export async function middleware(request: NextRequest) {
   )
 
   // Refresh session if expired - required for Server Components
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+    user = authUser
+  } catch (error) {
+    // If there's an error getting user, treat as not authenticated
+    console.error('Auth error in middleware:', error)
+  }
 
   // Protect dashboard routes - redirect to login if not authenticated
   if (!user && request.nextUrl.pathname.startsWith('/tenants')) {

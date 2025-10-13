@@ -23,7 +23,7 @@ export default async function TenantsPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <p className="text-sm text-gray-600">
             <span className="font-semibold text-gray-800">{tenants.length}</span>{' '}
             {tenants.length === 1 ? 'community' : 'communities'} total

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import MobileDashboardLayout from '@/components/layout/MobileDashboardLayout'
+import KeyboardShortcutsProvider from '@/components/shared/KeyboardShortcutsProvider'
 
 export default async function DashboardLayout({
   children,
@@ -17,5 +18,9 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  return <MobileDashboardLayout>{children}</MobileDashboardLayout>
+  return (
+    <KeyboardShortcutsProvider>
+      <MobileDashboardLayout>{children}</MobileDashboardLayout>
+    </KeyboardShortcutsProvider>
+  )
 }
