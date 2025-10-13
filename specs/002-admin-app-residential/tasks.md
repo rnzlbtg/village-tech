@@ -120,18 +120,18 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 2
 
-- [ ] T044 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing setStickerProgram() for configuring allocation limits
-- [ ] T045 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing approveStickerRequest() with allocation validation
-- [ ] T046 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing rejectStickerRequest() with rejection reason
-- [ ] T047 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing distributeStickerPhysical() with signature capture
-- [ ] T048 [P] [US2] Create sticker requests list page at `apps/admin/app/(dashboard)/stickers/page.tsx` with pending/approved/distributed filters
-- [ ] T049 [P] [US2] Create sticker program config page at `apps/admin/app/(dashboard)/stickers/program/page.tsx` for setting allocation limits
-- [ ] T050 [P] [US2] Create sticker request detail modal at `apps/admin/components/stickers/StickerRequestDetail.tsx` with vehicle info and approval actions
-- [ ] T051 [P] [US2] Create sticker distribution form at `apps/admin/components/stickers/StickerDistributionForm.tsx` with signature pad integration
-- [ ] T052 [US2] Add allocation limit validation before approval (check household hasn't exceeded limit)
-- [ ] T053 [US2] Add notification to household head when request is approved with pickup instructions
-- [ ] T054 [US2] Add notification to household head when request is rejected with reason
-- [ ] T055 [US2] Generate distribution receipt showing sticker code, vehicle plate, and signature
+- [X] T044 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing setStickerProgram() for configuring allocation limits
+- [X] T045 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing approveStickerRequest() with allocation validation
+- [X] T046 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing rejectStickerRequest() with rejection reason
+- [X] T047 [P] [US2] Create Server Action at `apps/admin/lib/actions/stickers.ts` implementing distributeStickerPhysical() with signature capture
+- [X] T048 [P] [US2] Create sticker requests list page at `apps/admin/app/(dashboard)/stickers/page.tsx` with pending/approved/distributed filters
+- [X] T049 [P] [US2] Create sticker program config page at `apps/admin/app/(dashboard)/stickers/program/page.tsx` for setting allocation limits
+- [X] T050 [P] [US2] Create sticker request detail modal at `apps/admin/components/stickers/StickerRequestDetail.tsx` with vehicle info and approval actions
+- [X] T051 [P] [US2] Create sticker distribution form at `apps/admin/components/stickers/StickerDistributionForm.tsx` with signature pad integration
+- [X] T052 [US2] Add allocation limit validation before approval (check household hasn't exceeded limit)
+- [X] T053 [US2] Add notification to household head when request is approved with pickup instructions
+- [X] T054 [US2] Add notification to household head when request is rejected with reason
+- [X] T055 [US2] Generate distribution receipt showing sticker code, vehicle plate, and signature
 
 **Checkpoint**: At this point, User Story 2 should be fully functional - complete sticker lifecycle from allocation to distribution
 
@@ -145,21 +145,21 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 3
 
-- [ ] T056 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing computeRoadFee() based on project type and duration
-- [ ] T057 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing approveConstructionPermit() with payment validation
-- [ ] T058 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing rejectConstructionPermit() with rejection reason
-- [ ] T059 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing markPermitComplete() to revoke worker access
-- [ ] T060 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing holdPermit() for payment deadline violations
-- [ ] T061 [P] [US3] Create permits list page at `apps/admin/app/(dashboard)/permits/page.tsx` with status filters (pending/approved/in_progress/completed)
-- [ ] T062 [P] [US3] Create permit detail page at `apps/admin/app/(dashboard)/permits/[id]/page.tsx` showing project details, workers, and payment status
-- [ ] T063 [P] [US3] Create permit approval form at `apps/admin/components/permits/PermitApprovalForm.tsx` with fee computation and worker authorization
-- [ ] T064 [P] [US3] Create file upload component at `apps/admin/components/permits/PermitAttachments.tsx` for project drawings and documents
-- [ ] T065 [US3] Add payment tracking integration linking permit_payments to payment_logs table
+- [X] T056 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing computeRoadFee() based on project type and duration
+- [X] T057 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing approveConstructionPermit() with payment validation
+- [X] T058 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing rejectConstructionPermit() with rejection reason
+- [X] T059 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing markPermitComplete() to revoke worker access
+- [X] T060 [P] [US3] Create Server Action at `apps/admin/lib/actions/permits.ts` implementing holdPermit() for payment deadline violations
+- [X] T061 [P] [US3] Create permits list page at `apps/admin/app/(dashboard)/permits/page.tsx` with status filters (pending/approved/in_progress/completed)
+- [X] T062 [P] [US3] Create permit detail page at `apps/admin/app/(dashboard)/permits/[id]/page.tsx` showing project details, workers, and payment status
+- [X] T063 [P] [US3] Create permit approval form at `apps/admin/components/permits/PermitApprovalForm.tsx` with fee computation and worker authorization
+- [X] T064 [P] [US3] Create file upload component at `apps/admin/components/permits/PermitAttachments.tsx` for project drawings and documents
+- [X] T065 [US3] Add payment tracking integration linking permit_payments to payment_logs table (handled by permit_payments table foreign key)
 - [ ] T066 [US3] Add file upload route at `apps/admin/app/api/permits/upload/route.ts` with signed URL pattern for large files
-- [ ] T067 [US3] Add notification to household head when permit is approved with worker access details
-- [ ] T068 [US3] Add notification to guard house with permit reference, household, and authorized workers list
+- [X] T067 [US3] Add notification to household head when permit is approved with worker access details
+- [X] T068 [US3] Add notification to guard house with permit reference, household, and authorized workers list
 - [ ] T069 [US3] Add automatic hold status when payment deadline is exceeded
-- [ ] T070 [US3] Generate permit reference number with format "PERM-YYYY-NNNNNN"
+- [X] T070 [US3] Generate permit reference number with format "PERM-YYYY-NNNNNN" (generated by database migration)
 
 **Checkpoint**: At this point, User Story 3 should be fully functional - complete permit workflow from request to completion
 
@@ -173,19 +173,19 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 4
 
-- [ ] T071 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing createAnnouncement() with file upload integration
-- [ ] T072 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing editAnnouncement() for updating content
-- [ ] T073 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing deleteAnnouncement() with soft delete
-- [ ] T074 [P] [US4] Create announcements list page at `apps/admin/app/(dashboard)/announcements/page.tsx` with priority and audience filters
-- [ ] T075 [P] [US4] Create announcement form page at `apps/admin/app/(dashboard)/announcements/new/page.tsx` with rich text editor
-- [ ] T076 [P] [US4] Create announcement form component at `apps/admin/components/announcements/AnnouncementForm.tsx` with audience checkboxes
-- [ ] T077 [P] [US4] Create file upload component at `apps/admin/components/announcements/AnnouncementAttachments.tsx` with drag-drop support
-- [ ] T078 [P] [US4] Create priority selector at `apps/admin/components/announcements/PrioritySelector.tsx` (normal/high/urgent)
+- [X] T071 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing createAnnouncement() with file upload integration
+- [X] T072 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing editAnnouncement() for updating content
+- [X] T073 [P] [US4] Create Server Action at `apps/admin/lib/actions/announcements.ts` implementing deleteAnnouncement() with soft delete
+- [X] T074 [P] [US4] Create announcements list page at `apps/admin/app/(dashboard)/announcements/page.tsx` with priority and audience filters
+- [X] T075 [P] [US4] Create announcement form page at `apps/admin/app/(dashboard)/announcements/new/page.tsx` with rich text editor
+- [X] T076 [P] [US4] Create announcement form component at `apps/admin/components/announcements/AnnouncementForm.tsx` with audience checkboxes
+- [X] T077 [P] [US4] Create file upload component at `apps/admin/components/announcements/AnnouncementAttachments.tsx` with drag-drop support
+- [X] T078 [P] [US4] Create priority selector at `apps/admin/components/announcements/PrioritySelector.tsx` (normal/high/urgent)
 - [ ] T079 [US4] Add file upload route at `apps/admin/app/api/announcements/upload/route.ts` with type validation (PDF, DOCX, images)
-- [ ] T080 [US4] Add file size validation (10MB limit) and magic bytes verification
-- [ ] T081 [US4] Add push notification sending for urgent announcements to all target audience users
-- [ ] T082 [US4] Add expiration date handling to auto-hide expired announcements
-- [ ] T083 [US4] Upload announcement files to Supabase Storage announcement-files bucket with tenant-scoped paths
+- [X] T080 [US4] Add file size validation (10MB limit) and magic bytes verification
+- [X] T081 [US4] Add push notification sending for urgent announcements to all target audience users
+- [X] T082 [US4] Add expiration date handling to auto-hide expired announcements
+- [X] T083 [US4] Upload announcement files to Supabase Storage announcement-files bucket with tenant-scoped paths
 
 **Checkpoint**: At this point, User Story 4 should be fully functional - announcements can be created and delivered to targeted audiences
 
@@ -199,21 +199,21 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 5
 
-- [ ] T084 [P] [US5] Create Server Action at `apps/admin/lib/actions/fees.ts` implementing createFeeStructure() for configuring billing periods
-- [ ] T085 [P] [US5] Create Server Action at `apps/admin/lib/actions/fees.ts` implementing generateInvoices() for creating bills based on fee schedule
-- [ ] T086 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPayment() with receipt generation
-- [ ] T087 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPartialPayment() with multiple invoice allocations
-- [ ] T088 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing voidPayment() for corrections with notes
+- [X] T084 [P] [US5] Create Server Action at `apps/admin/lib/actions/fees.ts` implementing createFeeStructure() for configuring billing periods
+- [X] T085 [P] [US5] Create Server Action at `apps/admin/lib/actions/fees.ts` implementing generateInvoices() for creating bills based on fee schedule
+- [X] T086 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPayment() with receipt generation
+- [X] T087 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPartialPayment() with multiple invoice allocations
+- [X] T088 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing voidPayment() for corrections with notes
 - [ ] T089 [P] [US5] Create fee structure page at `apps/admin/app/(dashboard)/fees/structure/page.tsx` for configuring fee types and amounts
-- [ ] T090 [P] [US5] Create invoices list page at `apps/admin/app/(dashboard)/fees/invoices/page.tsx` with status filters (unpaid/partial/paid/overdue)
+- [X] T090 [P] [US5] Create invoices list page at `apps/admin/app/(dashboard)/fees/invoices/page.tsx` with status filters (unpaid/partial/paid/overdue)
 - [ ] T091 [P] [US5] Create payment recording page at `apps/admin/app/(dashboard)/fees/payments/page.tsx` with household selection
 - [ ] T092 [P] [US5] Create payment form component at `apps/admin/components/fees/PaymentForm.tsx` with cash/check/bank transfer fields
 - [ ] T093 [P] [US5] Create receipt template at `apps/admin/lib/pdf/PaymentReceipt.tsx` using @react-pdf/renderer components
-- [ ] T094 [US5] Add auto-generation of invoice numbers with format "INV-YYYY-NNNNNN"
-- [ ] T095 [US5] Add receipt number generation using database function generate_receipt_number()
+- [X] T094 [US5] Add auto-generation of invoice numbers with format "INV-YYYY-NNNNNN"
+- [X] T095 [US5] Add receipt number generation using database function generate_receipt_number()
 - [ ] T096 [US5] Add PDF receipt generation and upload to Supabase Storage receipt-archives bucket
-- [ ] T097 [US5] Add payment trigger to update invoice status (unpaid → partial → paid) automatically
-- [ ] T098 [US5] Add overdue status auto-update for invoices past due date
+- [X] T097 [US5] Add payment trigger to update invoice status (unpaid → partial → paid) automatically
+- [X] T098 [US5] Add overdue status auto-update for invoices past due date (handled by database migration)
 - [ ] T099 [US5] Add payment history view showing all payments for a household
 
 **Checkpoint**: At this point, User Story 5 should be fully functional - complete fee collection workflow with receipt generation
@@ -228,17 +228,17 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 6
 
-- [ ] T100 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing createVillageRules() with effective dates
-- [ ] T101 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing updateVillageRules() for revisions
-- [ ] T102 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing setCurfewTimes() for gate access restrictions
-- [ ] T103 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing publishRules() to distribute to all user groups
-- [ ] T104 [P] [US6] Create village rules page at `apps/admin/app/(dashboard)/rules/page.tsx` with rules editor and curfew configuration
-- [ ] T105 [P] [US6] Create rules editor component at `apps/admin/components/rules/RulesEditor.tsx` with rich text editing
-- [ ] T106 [P] [US6] Create curfew settings component at `apps/admin/components/rules/CurfewSettings.tsx` with time pickers
-- [ ] T107 [US6] Add version tracking for rules with effective dates and change history
-- [ ] T108 [US6] Add notification to all residents when new rules are published
-- [ ] T109 [US6] Add notification to guard house when curfew times are updated
-- [ ] T110 [US6] Create announcement linking rules publication to announcement system
+- [X] T100 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing createVillageRules() with effective dates
+- [X] T101 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing updateVillageRules() for revisions
+- [X] T102 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing setCurfewTimes() for gate access restrictions
+- [X] T103 [P] [US6] Create Server Action at `apps/admin/lib/actions/rules.ts` implementing publishRules() to distribute to all user groups
+- [X] T104 [P] [US6] Create village rules page at `apps/admin/app/(dashboard)/rules/page.tsx` with rules editor and curfew configuration
+- [X] T105 [P] [US6] Create rules editor component at `apps/admin/components/rules/RulesEditor.tsx` with rich text editing
+- [X] T106 [P] [US6] Create curfew settings component at `apps/admin/components/rules/CurfewSettings.tsx` with time pickers
+- [X] T107 [US6] Add version tracking for rules with effective dates and change history
+- [X] T108 [US6] Add notification to all residents when new rules are published
+- [X] T109 [US6] Add notification to guard house when curfew times are updated
+- [X] T110 [US6] Create announcement linking rules publication to announcement system
 
 **Checkpoint**: All user stories should now be independently functional
 
