@@ -238,14 +238,14 @@
 - [X] T128 Implement search and filter functionality for tenant list
 - [X] T129 Add pagination to all list views
 - [X] T130 Implement responsive design for mobile devices
-- [ ] T131 Add keyboard shortcuts for common operations
+- [X] T131 Add keyboard shortcuts for common operations
 - [X] T132 Create seed data script for development in `supabase/seed.sql`
-- [ ] T133 Add comprehensive error messages with recovery suggestions
+- [X] T133 Add comprehensive error messages with recovery suggestions
 - [X] T134 Implement rate limiting on bulk import endpoints
 - [X] T135 Add file size and type validation for bulk imports
 - [X] T136 Optimize database queries with proper indexing verification
-- [ ] T137 Add performance monitoring for page load times
-- [ ] T138 Run quickstart.md validation and verify all workflows
+- [X] T137 Add performance monitoring for page load times
+- [X] T138 Run quickstart.md validation and verify all workflows
 - [X] T139 Update documentation with implementation notes
 
 ---
