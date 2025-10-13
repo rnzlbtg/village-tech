@@ -42,7 +42,6 @@ export default async function NewUserPage() {
           <li>• Super Admins have platform-wide access to all tenants</li>
           <li>• Admin Heads can fully manage their assigned tenant</li>
           <li>• Admin Officers have limited administrative access</li>
-          <li>• Passwords must contain uppercase, lowercase, and numeric characters</li>
           <li>• All roles except Super Admin require a tenant assignment</li>
         </ul>
       </div>

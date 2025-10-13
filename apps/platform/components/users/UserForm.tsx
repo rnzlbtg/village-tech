@@ -96,37 +96,58 @@ export default function UserForm({ initialData, mode, tenants }: UserFormProps) 
           )}
         </div>
 
-        {/* Full Name */}
+        {/* First Name */}
         <div>
-          <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
-            Full Name *
+          <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
+            First Name *
           </label>
           <input
             type="text"
-            id="full_name"
-            name="full_name"
+            id="first_name"
+            name="first_name"
             required
-            defaultValue={initialData?.full_name}
+            defaultValue={initialData?.first_name}
             className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-              fieldErrors.full_name ? 'border-red-500' : ''
+              fieldErrors.first_name ? 'border-red-500' : ''
             }`}
-            placeholder="John Doe"
+            placeholder="John"
           />
-          {fieldErrors.full_name && (
-            <p className="text-sm text-red-600 mt-1">{fieldErrors.full_name}</p>
+          {fieldErrors.first_name && (
+            <p className="text-sm text-red-600 mt-1">{fieldErrors.first_name}</p>
+          )}
+        </div>
+
+        {/* Last Name */}
+        <div>
+          <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
+            Last Name *
+          </label>
+          <input
+            type="text"
+            id="last_name"
+            name="last_name"
+            required
+            defaultValue={initialData?.last_name}
+            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+              fieldErrors.last_name ? 'border-red-500' : ''
+            }`}
+            placeholder="Doe"
+          />
+          {fieldErrors.last_name && (
+            <p className="text-sm text-red-600 mt-1">{fieldErrors.last_name}</p>
           )}
         </div>
 
         {/* Phone */}
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
             Phone Number
           </label>
           <input
             type="tel"
-            id="phone"
-            name="phone"
-            defaultValue={initialData?.phone || ''}
+            id="phone_number"
+            name="phone_number"
+            defaultValue={initialData?.phone_number || ''}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             placeholder="+63 917 123 4567"
           />
@@ -152,8 +173,8 @@ export default function UserForm({ initialData, mode, tenants }: UserFormProps) 
             <option value="super_admin">Super Admin</option>
             <option value="admin_head">Admin Head</option>
             <option value="admin_officer">Admin Officer</option>
-            <option value="resident">Resident</option>
-            <option value="sentinel">Security Guard</option>
+            <option value="household_head">Household Head</option>
+            <option value="guard">Security Guard</option>
           </select>
           {fieldErrors.role && (
             <p className="text-sm text-red-600 mt-1">{fieldErrors.role}</p>
@@ -196,53 +217,28 @@ export default function UserForm({ initialData, mode, tenants }: UserFormProps) 
 
         {/* Password (create mode only) */}
         {mode === 'create' && (
-          <>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password *
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                minLength={8}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                  fieldErrors.password ? 'border-red-500' : ''
-                }`}
-                placeholder="Minimum 8 characters"
-              />
-              {fieldErrors.password && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.password}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Must contain uppercase, lowercase, and number
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirm_password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Confirm Password *
-              </label>
-              <input
-                type="password"
-                id="confirm_password"
-                name="confirm_password"
-                required
-                minLength={8}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
-                  fieldErrors.confirm_password ? 'border-red-500' : ''
-                }`}
-                placeholder="Re-enter password"
-              />
-              {fieldErrors.confirm_password && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.confirm_password}</p>
-              )}
-            </div>
-          </>
+          <div className="md:col-span-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Temporary Password *
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minLength={8}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary ${
+                fieldErrors.password ? 'border-red-500' : ''
+              }`}
+              placeholder="Minimum 8 characters"
+            />
+            {fieldErrors.password && (
+              <p className="text-sm text-red-600 mt-1">{fieldErrors.password}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              User will be prompted to change password on first login.
+            </p>
+          </div>
         )}
 
         {/* Active Status (edit mode only) */}

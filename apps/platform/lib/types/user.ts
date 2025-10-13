@@ -1,9 +1,10 @@
 export interface User {
   id: string
   email: string
-  full_name: string
-  phone?: string | null
-  role: 'super_admin' | 'admin_head' | 'admin_officer' | 'resident' | 'sentinel'
+  first_name: string
+  last_name: string
+  phone_number?: string | null
+  role: 'super_admin' | 'admin_head' | 'admin_officer' | 'household_head' | 'guard'
   tenant_id?: string | null
   is_active: boolean
   created_at: string

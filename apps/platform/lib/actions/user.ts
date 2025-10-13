@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createUserSchema, updateUserSchema } from '@/lib/validations/user'
 import { revalidatePath } from 'next/cache'
 import { requireSuperAdmin } from '@/lib/auth/helpers'
@@ -11,20 +11,21 @@ export async function createUser(formData: FormData) {
     await requireSuperAdmin()
 
     // Parse and validate form data
+    const tenantIdValue = formData.get('tenant_id') as string
     const rawData = {
       email: formData.get('email') as string,
-      full_name: formData.get('full_name') as string,
-      phone: formData.get('phone') as string || null,
+      first_name: formData.get('first_name') as string,
+      last_name: formData.get('last_name') as string,
+      phone_number: formData.get('phone_number') as string || null,
       role: formData.get('role') as string,
-      tenant_id: formData.get('tenant_id') as string || null,
+      tenant_id: tenantIdValue && tenantIdValue !== '' ? tenantIdValue : null,
       password: formData.get('password') as string,
-      confirm_password: formData.get('confirm_password') as string,
     }
 
     const validatedData = createUserSchema.parse(rawData)
 
     // Create Supabase admin client (service role)
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Check if email already exists
     const { data: existingUser } = await supabase
@@ -46,7 +47,8 @@ export async function createUser(formData: FormData) {
       password: validatedData.password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
-        full_name: validatedData.full_name,
+        first_name: validatedData.first_name,
+        last_name: validatedData.last_name,
       },
       app_metadata: {
         role: validatedData.role,
@@ -73,8 +75,9 @@ export async function createUser(formData: FormData) {
     const { error: profileError } = await supabase.from('user_profiles').insert({
       id: authUser.user.id,
       email: validatedData.email,
-      full_name: validatedData.full_name,
-      phone: validatedData.phone,
+      first_name: validatedData.first_name,
+      last_name: validatedData.last_name,
+      phone_number: validatedData.phone_number,
       role: validatedData.role,
       tenant_id: validatedData.tenant_id,
       is_active: true,
@@ -120,7 +123,8 @@ export async function createUser(formData: FormData) {
       data: {
         id: authUser.user.id,
         email: validatedData.email,
-        full_name: validatedData.full_name,
+        first_name: validatedData.first_name,
+        last_name: validatedData.last_name,
         role: validatedData.role,
       },
       message: 'User created successfully',
@@ -131,9 +135,15 @@ export async function createUser(formData: FormData) {
     if (error instanceof Error) {
       // Zod validation errors
       if (error.name === 'ZodError') {
+        const zodError = error as any
+        const firstError = zodError.errors?.[0]
+        const errorMessage = firstError
+          ? `${firstError.path.join('.')}: ${firstError.message}`
+          : 'Validation failed. Please check your input.'
+
         return {
           success: false,
-          error: 'Validation failed. Please check your input.',
+          error: errorMessage,
         }
       }
 
@@ -157,8 +167,9 @@ export async function updateUser(formData: FormData) {
 
     const rawData = {
       id: formData.get('id') as string,
-      full_name: formData.get('full_name') as string,
-      phone: formData.get('phone') as string || null,
+      first_name: formData.get('first_name') as string,
+      last_name: formData.get('last_name') as string,
+      phone_number: formData.get('phone_number') as string || null,
       role: formData.get('role') as string,
       tenant_id: formData.get('tenant_id') as string || null,
       is_active: formData.get('is_active') === 'true',
@@ -172,8 +183,9 @@ export async function updateUser(formData: FormData) {
     const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
-        full_name: validatedData.full_name,
-        phone: validatedData.phone,
+        first_name: validatedData.first_name,
+        last_name: validatedData.last_name,
+        phone_number: validatedData.phone_number,
         role: validatedData.role,
         tenant_id: validatedData.tenant_id,
         is_active: validatedData.is_active,
