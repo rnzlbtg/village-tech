@@ -28,13 +28,13 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Next.js 14 project at `apps/admin/` with TypeScript and App Router configuration
-- [ ] T002 [P] Install core dependencies: next@14, react@18, typescript@5, @supabase/supabase-js@2.45+, zod@3.23+
-- [ ] T003 [P] Install UI dependencies: shadcn/ui components, @tanstack/react-query@5, react-hook-form@7
-- [ ] T004 [P] Install file handling: @react-pdf/renderer@4, axios@1.7+, react-dropzone@14
-- [ ] T005 [P] Configure ESLint, Prettier, and TypeScript strict mode in `apps/admin/tsconfig.json`
-- [ ] T006 [P] Setup environment configuration in `apps/admin/.env.local` template with Supabase keys
-- [ ] T007 [P] Initialize shadcn/ui with components config at `apps/admin/components/ui/`
+- [X] T001 Create Next.js 14 project at `apps/admin/` with TypeScript and App Router configuration
+- [X] T002 [P] Install core dependencies: next@14, react@18, typescript@5, @supabase/supabase-js@2.45+, zod@3.23+
+- [X] T003 [P] Install UI dependencies: shadcn/ui components, @tanstack/react-query@5, react-hook-form@7
+- [X] T004 [P] Install file handling: @react-pdf/renderer@4, axios@1.7+, react-dropzone@14
+- [X] T005 [P] Configure ESLint, Prettier, and TypeScript strict mode in `apps/admin/tsconfig.json`
+- [X] T006 [P] Setup environment configuration in `apps/admin/.env.local` template with Supabase keys
+- [X] T007 [P] Initialize shadcn/ui with components config at `apps/admin/components/ui/` (N/A - project uses custom Tailwind components instead, consistent with platform app)
 
 ---
 
@@ -46,44 +46,44 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Database Schema & Migrations
 
-- [ ] T008 Create migration `supabase/migrations/010_create_households.sql` for households and household_members tables with indexes
-- [ ] T009 [P] Create migration `supabase/migrations/011_create_stickers.sql` for sticker_programs, sticker_requests tables with indexes
-- [ ] T010 [P] Create migration `supabase/migrations/012_create_permits.sql` for construction_permits, permit_payments tables with indexes
-- [ ] T011 [P] Create migration `supabase/migrations/013_create_announcements.sql` for announcements table with indexes
-- [ ] T012 [P] Create migration `supabase/migrations/014_create_payment_logs.sql` for payment_logs, invoices tables with indexes and generated columns
+- [X] T008 Create migration `supabase/migrations/010_create_households.sql` for households and household_members tables with indexes
+- [X] T009 [P] Create migration `supabase/migrations/011_create_stickers.sql` for sticker_programs, sticker_requests tables with indexes
+- [X] T010 [P] Create migration `supabase/migrations/012_create_permits.sql` for construction_permits, permit_payments tables with indexes
+- [X] T011 [P] Create migration `supabase/migrations/013_create_announcements.sql` for announcements table with indexes
+- [X] T012 [P] Create migration `supabase/migrations/014_create_payment_logs.sql` for payment_logs, invoices tables with indexes and generated columns
 - [ ] T013 [P] Create migration `supabase/migrations/015_create_elections.sql` for elections, election_candidates tables with indexes
-- [ ] T014 Create migration `supabase/migrations/016_create_rls_policies.sql` for all tenant-scoped RLS policies (admins and household heads)
-- [ ] T015 Create migration `supabase/migrations/017_create_database_functions.sql` for generate_receipt_number() and update_invoice_status() trigger functions
+- [X] T014 Create migration `supabase/migrations/016_create_rls_policies.sql` for all tenant-scoped RLS policies (admins and household heads)
+- [X] T015 Create migration `supabase/migrations/017_create_database_functions.sql` for generate_receipt_number() and update_invoice_status() trigger functions
 
 ### Supabase Storage Configuration
 
-- [ ] T016 [P] Create Storage bucket `household-documents` with RLS policies in `supabase/storage/household-documents-policy.sql`
-- [ ] T017 [P] Create Storage bucket `permit-attachments` with RLS policies in `supabase/storage/permit-attachments-policy.sql`
-- [ ] T018 [P] Create Storage bucket `announcement-files` with RLS policies in `supabase/storage/announcement-files-policy.sql`
-- [ ] T019 [P] Create Storage bucket `receipt-archives` with RLS policies in `supabase/storage/receipt-archives-policy.sql`
+- [X] T016 [P] Create Storage bucket `household-documents` with RLS policies in `supabase/storage/household-documents-policy.sql`
+- [X] T017 [P] Create Storage bucket `permit-attachments` with RLS policies in `supabase/storage/permit-attachments-policy.sql`
+- [X] T018 [P] Create Storage bucket `announcement-files` with RLS policies in `supabase/storage/announcement-files-policy.sql`
+- [X] T019 [P] Create Storage bucket `receipt-archives` with RLS policies in `supabase/storage/receipt-archives-policy.sql`
 
 ### Authentication & Authorization
 
-- [ ] T020 Create Supabase client utilities at `apps/admin/lib/supabase/server.ts` and `apps/admin/lib/supabase/client.ts`
-- [ ] T021 [P] Create auth middleware at `apps/admin/middleware.ts` to verify admin role and tenant scope
-- [ ] T022 [P] Create auth helper functions at `apps/admin/lib/auth/helpers.ts` (getTenantId, requireAdmin, getUserId)
-- [ ] T023 Create login page at `apps/admin/app/(auth)/login/page.tsx` with Supabase Auth integration
+- [X] T020 Create Supabase client utilities at `apps/admin/lib/supabase/server.ts` and `apps/admin/lib/supabase/client.ts`
+- [X] T021 [P] Create auth middleware at `apps/admin/middleware.ts` to verify admin role and tenant scope
+- [X] T022 [P] Create auth helper functions at `apps/admin/lib/auth/helpers.ts` (getTenantId, requireAdmin, getUserId)
+- [X] T023 Create login page at `apps/admin/app/(auth)/login/page.tsx` with Supabase Auth integration
 
 ### Shared UI Components
 
-- [ ] T024 [P] Create shared layout component at `apps/admin/components/shared/AdminLayout.tsx` with sidebar navigation
-- [ ] T025 [P] Create tenant header component at `apps/admin/components/shared/TenantHeader.tsx` showing tenant name and user info
-- [ ] T026 [P] Create data table component at `apps/admin/components/shared/DataTable.tsx` with sorting, filtering, pagination
-- [ ] T027 [P] Create form components at `apps/admin/components/shared/FormField.tsx` with React Hook Form integration
-- [ ] T028 [P] Create status badge component at `apps/admin/components/shared/StatusBadge.tsx` for status visualization
+- [X] T024 [P] Create shared layout component at `apps/admin/components/shared/AdminLayout.tsx` with sidebar navigation
+- [X] T025 [P] Create tenant header component at `apps/admin/components/shared/TenantHeader.tsx` showing tenant name and user info
+- [X] T026 [P] Create data table component at `apps/admin/components/shared/DataTable.tsx` with sorting, filtering, pagination
+- [X] T027 [P] Create form components at `apps/admin/components/shared/FormField.tsx` with React Hook Form integration
+- [X] T028 [P] Create status badge component at `apps/admin/components/shared/StatusBadge.tsx` for status visualization
 
 ### Validation Schemas
 
-- [ ] T029 [P] Create validation schemas at `apps/admin/lib/validations/household.ts` for household operations (Zod)
-- [ ] T030 [P] Create validation schemas at `apps/admin/lib/validations/stickers.ts` for sticker operations (Zod)
-- [ ] T031 [P] Create validation schemas at `apps/admin/lib/validations/permits.ts` for permit operations (Zod)
-- [ ] T032 [P] Create validation schemas at `apps/admin/lib/validations/announcements.ts` for announcement operations (Zod)
-- [ ] T033 [P] Create validation schemas at `apps/admin/lib/validations/payments.ts` for payment operations (Zod)
+- [X] T029 [P] Create validation schemas at `apps/admin/lib/validations/household.ts` for household operations (Zod)
+- [X] T030 [P] Create validation schemas at `apps/admin/lib/validations/stickers.ts` for sticker operations (Zod)
+- [X] T031 [P] Create validation schemas at `apps/admin/lib/validations/permits.ts` for permit operations (Zod)
+- [X] T032 [P] Create validation schemas at `apps/admin/lib/validations/announcements.ts` for announcement operations (Zod)
+- [X] T033 [P] Create validation schemas at `apps/admin/lib/validations/payments.ts` for payment operations (Zod)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -97,16 +97,16 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 ### Implementation for User Story 1
 
-- [ ] T034 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing createHousehold() with Supabase Auth user creation
-- [ ] T035 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing updateHousehold() for household info updates
-- [ ] T036 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing addHouseholdMember() for adding family members
-- [ ] T037 [P] [US1] Create household list page at `apps/admin/app/(dashboard)/households/page.tsx` with DataTable showing all households
-- [ ] T038 [P] [US1] Create household detail page at `apps/admin/app/(dashboard)/households/[id]/page.tsx` showing household info and members
-- [ ] T039 [P] [US1] Create household form component at `apps/admin/components/households/HouseholdForm.tsx` with residence selection
-- [ ] T040 [P] [US1] Create household head form component at `apps/admin/components/households/HouseholdHeadForm.tsx` with email/phone fields
-- [ ] T041 [P] [US1] Create household member form component at `apps/admin/components/households/HouseholdMemberForm.tsx` with relationship dropdown
-- [ ] T042 [US1] Add form validation and error handling for household creation with duplicate email checks
-- [ ] T043 [US1] Add welcome email notification to household head with login credentials and app links
+- [X] T034 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing createHousehold() with Supabase Auth user creation
+- [X] T035 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing updateHousehold() for household info updates
+- [X] T036 [P] [US1] Create Server Action at `apps/admin/lib/actions/household.ts` implementing addHouseholdMember() for adding family members
+- [X] T037 [P] [US1] Create household list page at `apps/admin/app/(dashboard)/households/page.tsx` with DataTable showing all households
+- [X] T038 [P] [US1] Create household detail page at `apps/admin/app/(dashboard)/households/[id]/page.tsx` showing household info and members
+- [X] T039 [P] [US1] Create household form component at `apps/admin/components/households/ResidenceUnitForm.tsx` with residence selection
+- [X] T040 [P] [US1] Create household head form component at `apps/admin/components/households/HouseholdHeadForm.tsx` with email/phone fields
+- [X] T041 [P] [US1] Create household member form component at `apps/admin/components/households/HouseholdMemberForm.tsx` with relationship dropdown
+- [X] T042 [US1] Add form validation and error handling for household creation with duplicate email checks
+- [X] T043 [US1] Add welcome email notification to household head with login credentials and app links
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - admin can create households and household heads can log in
 
@@ -204,17 +204,17 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 - [X] T086 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPayment() with receipt generation
 - [X] T087 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing recordPartialPayment() with multiple invoice allocations
 - [X] T088 [P] [US5] Create Server Action at `apps/admin/lib/actions/payments.ts` implementing voidPayment() for corrections with notes
-- [ ] T089 [P] [US5] Create fee structure page at `apps/admin/app/(dashboard)/fees/structure/page.tsx` for configuring fee types and amounts
+- [X] T089 [P] [US5] Create fee structure page at `apps/admin/app/(dashboard)/fees/structure/page.tsx` for configuring fee types and amounts
 - [X] T090 [P] [US5] Create invoices list page at `apps/admin/app/(dashboard)/fees/invoices/page.tsx` with status filters (unpaid/partial/paid/overdue)
-- [ ] T091 [P] [US5] Create payment recording page at `apps/admin/app/(dashboard)/fees/payments/page.tsx` with household selection
-- [ ] T092 [P] [US5] Create payment form component at `apps/admin/components/fees/PaymentForm.tsx` with cash/check/bank transfer fields
-- [ ] T093 [P] [US5] Create receipt template at `apps/admin/lib/pdf/PaymentReceipt.tsx` using @react-pdf/renderer components
+- [X] T091 [P] [US5] Create payment recording page at `apps/admin/app/(dashboard)/fees/payments/page.tsx` with household selection
+- [X] T092 [P] [US5] Create payment form component at `apps/admin/components/fees/PaymentForm.tsx` with cash/check/bank transfer fields
+- [X] T093 [P] [US5] Create receipt template at `apps/admin/lib/pdf/PaymentReceipt.tsx` using @react-pdf/renderer components
 - [X] T094 [US5] Add auto-generation of invoice numbers with format "INV-YYYY-NNNNNN"
 - [X] T095 [US5] Add receipt number generation using database function generate_receipt_number()
-- [ ] T096 [US5] Add PDF receipt generation and upload to Supabase Storage receipt-archives bucket
+- [X] T096 [US5] Add PDF receipt generation and upload to Supabase Storage receipt-archives bucket
 - [X] T097 [US5] Add payment trigger to update invoice status (unpaid → partial → paid) automatically
 - [X] T098 [US5] Add overdue status auto-update for invoices past due date (handled by database migration)
-- [ ] T099 [US5] Add payment history view showing all payments for a household
+- [X] T099 [US5] Add payment history view showing all payments for a household
 
 **Checkpoint**: At this point, User Story 5 should be fully functional - complete fee collection workflow with receipt generation
 
@@ -248,13 +248,13 @@ description: "Implementation tasks for Admin App - Residential Community Adminis
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T111 [P] Create dashboard home page at `apps/admin/app/(dashboard)/page.tsx` with key metrics (pending requests, recent payments, active permits)
+- [X] T111 [P] Create dashboard home page at `apps/admin/app/(dashboard)/page.tsx` with key metrics (pending requests, recent payments, active permits)
 - [ ] T112 [P] Add search functionality across households, permits, and payments at `apps/admin/components/shared/GlobalSearch.tsx`
 - [ ] T113 [P] Add export functionality for payment reports (CSV/Excel) at `apps/admin/lib/exports/payments.ts`
 - [ ] T114 [P] Add export functionality for household lists at `apps/admin/lib/exports/households.ts`
 - [ ] T115 [P] Create audit log viewer at `apps/admin/app/(dashboard)/audit/page.tsx` showing all admin actions with timestamp and user
-- [ ] T116 [P] Add loading states and skeleton screens for all data tables
-- [ ] T117 [P] Add error boundaries for graceful error handling at `apps/admin/app/error.tsx`
+- [X] T116 [P] Add loading states and skeleton screens for all data tables
+- [X] T117 [P] Add error boundaries for graceful error handling at `apps/admin/app/error.tsx`
 - [ ] T118 [P] Add offline indicator and connection status at `apps/admin/components/shared/ConnectionStatus.tsx`
 - [ ] T119 [P] Optimize images and assets with Next.js Image component
 - [ ] T120 [P] Add accessibility improvements (ARIA labels, keyboard navigation, screen reader support)

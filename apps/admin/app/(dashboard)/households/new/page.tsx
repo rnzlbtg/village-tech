@@ -1,63 +1,49 @@
-import { requireAdmin, getTenantId } from '@/lib/auth/helpers'
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { createHousehold } from '@/lib/actions/household'
+import { createClient } from '@/lib/supabase/client'
 
-export default async function NewHouseholdPage() {
-  const user = await requireAdmin()
-  const tenantId = await getTenantId()
+export default function NewHouseholdPage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [properties, setProperties] = useState<any[]>([])
 
-  console.log('User role:', user.app_metadata?.role || user.user_metadata?.role)
-  console.log('Tenant ID:', tenantId)
-  console.log('User app_metadata:', user.app_metadata)
-  console.log('User user_metadata:', user.user_metadata)
+  useEffect(() => {
+    async function fetchProperties() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('properties')
+        .select('id, name')
+        .order('name')
 
-  const supabase = await createClient()
+      if (data) {
+        setProperties(data)
+      }
+    }
+    fetchProperties()
+  }, [])
 
-  // Debug: Check actual JWT claims
-  const { data: sessionData } = await supabase.auth.getSession()
-  if (sessionData.session) {
-    const token = sessionData.session.access_token
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
-    console.log('JWT Payload:', payload)
-    console.log('JWT role claim:', payload.role)
-    console.log('JWT tenant_id claim:', payload.tenant_id)
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const formData = new FormData(e.currentTarget)
+    const result = await createHousehold(formData)
+
+    if (result.success) {
+      router.push('/households')
+      router.refresh()
+    } else {
+      setError(result.error || 'Failed to create household')
+      setLoading(false)
+    }
   }
-
-  // Test RLS with raw SQL
-  const { data: rlsTest, error: rlsError } = await supabase.rpc('test_rls_context')
-  console.log('RLS Test Result:', rlsTest)
-  console.log('RLS Test Error:', rlsError)
-
-  // Check all properties in DB (for debugging)
-  const { data: allProperties } = await supabase
-    .from('properties')
-    .select('id, name, tenant_id')
-    .limit(10)
-
-  // Fetch properties and their units for the dropdown
-  const { data: properties, error: propertiesError } = await supabase
-    .from('properties')
-    .select(
-      `
-      id,
-      name,
-      residence_units(
-        id,
-        unit_number
-      )
-    `
-    )
-    .eq('tenant_id', tenantId!)
-    .order('name')
-
-  if (propertiesError) {
-    console.error('Error fetching properties:', propertiesError)
-  }
-
-  console.log('Properties data:', properties)
-  console.log('Properties count:', properties?.length || 0)
-  console.log('All properties:', allProperties)
 
   return (
     <div className="space-y-6">
@@ -67,114 +53,245 @@ export default async function NewHouseholdPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Add New Household</h1>
-          <p className="text-gray-600 mt-1">Create a new household record</p>
+          <p className="text-gray-600 mt-1">Create a new household and residence unit</p>
         </div>
       </div>
 
-      {/* Debug info */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm space-y-2">
-        <p>
-          <strong>Debug Info:</strong>
-        </p>
-        <p>Tenant ID: {tenantId || 'null'}</p>
-        <p>User Role: {user.app_metadata?.role || user.user_metadata?.role || 'null'}</p>
-        <p>Properties Found: {properties?.length || 0}</p>
-        {propertiesError && <p className="text-red-600">Error: {propertiesError.message}</p>}
-        <details className="mt-2">
-          <summary className="cursor-pointer font-semibold">
-            All Properties in DB (first 10)
-          </summary>
-          <pre className="mt-2 text-xs bg-white p-2 rounded overflow-auto">
-            {JSON.stringify(properties, null, 2)}
-          </pre>
-        </details>
-      </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <form className="space-y-6">
-          <div>
-            <label htmlFor="household_name" className="block text-sm font-medium text-gray-700">
-              Household Name
-            </label>
-            <input
-              type="text"
-              id="household_name"
-              name="household_name"
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-              placeholder="e.g., Smith Family"
-            />
+      <div className="bg-white rounded-lg shadow">
+        <form onSubmit={handleSubmit} className="p-6 space-y-8">
+          {/* Residence Unit Section */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+              Residence Unit Details
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="property_id" className="block text-sm font-medium text-gray-700 mb-2">
+                  Property <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="property_id"
+                  name="property_id"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                >
+                  <option value="">Select a property</option>
+                  {properties?.map((property: any) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="unit_number" className="block text-sm font-medium text-gray-700 mb-2">
+                  Unit Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="unit_number"
+                  name="unit_number"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="e.g., 101, House 25"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="unit_type" className="block text-sm font-medium text-gray-700 mb-2">
+                  Residence Type
+                </label>
+                <select
+                  id="unit_type"
+                  name="unit_type"
+                  defaultValue="residential"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="mixed">Mixed</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="unit_address" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Address
+                </label>
+                <input
+                  type="text"
+                  id="unit_address"
+                  name="unit_address"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Full address of the unit"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="property_id" className="block text-sm font-medium text-gray-700">
-              Property
-            </label>
-            <select
-              id="property_id"
-              name="property_id"
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            >
-              <option value="">Select a property</option>
-              {properties?.map((property: any) => {
-                const units =
-                  property.residence_units?.filter((unit: any) => unit.id !== null) || []
-                return units.length > 0 ? (
-                  <optgroup key={property.id} label={property.name}>
-                    {units.map((unit: any) => (
-                      <option key={unit.id} value={unit.id}>
-                        Unit {unit.unit_number}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null
-              })}
-            </select>
+          {/* Household Section */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+              Household Details
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="move_in_date" className="block text-sm font-medium text-gray-700 mb-2">
+                  Move-In Date
+                </label>
+                <input
+                  type="date"
+                  id="move_in_date"
+                  name="move_in_date"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  defaultValue="active"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={3}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Additional notes or comments"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="move_in_date" className="block text-sm font-medium text-gray-700">
-              Move-In Date
-            </label>
-            <input
-              type="date"
-              id="move_in_date"
-              name="move_in_date"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            />
+          {/* Household Head Section */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-800 border-b pb-2">
+              Household Head (Login Account)
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
+                  First Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="first_name"
+                  name="first_name"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="John"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="last_name"
+                  name="last_name"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Smith"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="john.smith@example.com"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="phone_number"
+                  name="phone_number"
+                  required
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="+63 912 345 6789"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  id="date_of_birth"
+                  name="date_of_birth"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  minLength={6}
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-              Status
-            </label>
-            <select
-              id="status"
-              name="status"
-              required
-              defaultValue="active"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors"
-            >
-              Create Household
-            </button>
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Link
               href="/households"
-              className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-center"
+              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
             >
               Cancel
             </Link>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Creating...' : 'Create Household & Unit'}
+            </button>
           </div>
         </form>
       </div>

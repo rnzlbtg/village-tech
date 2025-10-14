@@ -35,14 +35,14 @@ export async function setStickerProgram(input: SetStickerProgramInput) {
       .from('sticker_programs')
       .select('id')
       .eq('tenant_id', tenantId)
-      .eq('active', true)
+      .eq('is_active', true)
       .maybeSingle()
 
     if (existingProgram) {
       // Deactivate existing program
       await supabase
         .from('sticker_programs')
-        .update({ active: false })
+        .update({ is_active: false })
         .eq('id', existingProgram.id)
     }
 
@@ -52,10 +52,11 @@ export async function setStickerProgram(input: SetStickerProgramInput) {
       .insert({
         tenant_id: tenantId,
         program_name: data.program_name,
+        program_year: data.program_year,
         stickers_per_household: data.stickers_per_household,
-        effective_date: data.effective_date,
-        expiry_date: data.expiry_date,
-        active: true,
+        start_date: data.effective_date,
+        end_date: data.expiry_date,
+        is_active: true,
       })
       .select()
       .single()
@@ -122,7 +123,7 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
       .from('sticker_programs')
       .select('stickers_per_household')
       .eq('tenant_id', tenantId)
-      .eq('active', true)
+      .eq('is_active', true)
       .single()
 
     if (programError || !program) {

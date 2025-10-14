@@ -79,18 +79,6 @@ export async function createProperty(formData: FormData) {
       name: formData.get('name') as string,
       address: formData.get('address') as string,
       property_type: formData.get('property_type') as string || undefined,
-      total_units: formData.get('total_units')
-        ? parseInt(formData.get('total_units') as string)
-        : undefined,
-      total_floors: formData.get('total_floors')
-        ? parseInt(formData.get('total_floors') as string)
-        : undefined,
-      year_built: formData.get('year_built')
-        ? parseInt(formData.get('year_built') as string)
-        : undefined,
-      lot_size: formData.get('lot_size')
-        ? parseFloat(formData.get('lot_size') as string)
-        : undefined,
     }
 
     const { data: property, error } = await supabase
@@ -135,18 +123,6 @@ export async function updateProperty(propertyId: string, formData: FormData) {
       name: formData.get('name') as string,
       address: formData.get('address') as string,
       property_type: formData.get('property_type') as string || undefined,
-      total_units: formData.get('total_units')
-        ? parseInt(formData.get('total_units') as string)
-        : undefined,
-      total_floors: formData.get('total_floors')
-        ? parseInt(formData.get('total_floors') as string)
-        : undefined,
-      year_built: formData.get('year_built')
-        ? parseInt(formData.get('year_built') as string)
-        : undefined,
-      lot_size: formData.get('lot_size')
-        ? parseFloat(formData.get('lot_size') as string)
-        : undefined,
     }
 
     const { data: property, error } = await supabase

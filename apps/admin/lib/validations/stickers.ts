@@ -1,25 +1,27 @@
 import { z } from 'zod'
 
-export const createStickerProgramSchema = z.object({
+export const setStickerProgramSchema = z.object({
   program_name: z.string().min(3, 'Program name must be at least 3 characters'),
   program_year: z.number().int().min(2020).max(2100),
   stickers_per_household: z.number().int().min(1).max(10),
-  start_date: z.string(),
-  end_date: z.string().optional(),
+  effective_date: z.string(),
+  expiry_date: z.string().optional(),
 })
 
 export const approveStickerRequestSchema = z.object({
-  sticker_code: z.string().min(3, 'Sticker code is required'),
-  notes: z.string().optional(),
+  request_id: z.string().uuid(),
 })
 
 export const rejectStickerRequestSchema = z.object({
+  request_id: z.string().uuid(),
   rejection_reason: z.string().min(10, 'Rejection reason must be at least 10 characters'),
 })
 
 export const distributeStickerSchema = z.object({
-  recipient_signature_url: z.string().url('Invalid signature URL'),
-  notes: z.string().optional(),
+  request_id: z.string().uuid(),
+  sticker_code: z.string().min(3, 'Sticker code is required'),
+  signature: z.string().optional(),
+  distributed_at: z.string().optional(),
 })
 
 export const createStickerRequestSchema = z.object({
@@ -32,7 +34,7 @@ export const createStickerRequestSchema = z.object({
   vehicle_type: z.enum(['car', 'suv', 'truck', 'motorcycle', 'van']),
 })
 
-export type CreateStickerProgramInput = z.infer<typeof createStickerProgramSchema>
+export type SetStickerProgramInput = z.infer<typeof setStickerProgramSchema>
 export type ApproveStickerRequestInput = z.infer<typeof approveStickerRequestSchema>
 export type RejectStickerRequestInput = z.infer<typeof rejectStickerRequestSchema>
 export type DistributeStickerInput = z.infer<typeof distributeStickerSchema>

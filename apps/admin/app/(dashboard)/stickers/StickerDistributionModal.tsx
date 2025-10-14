@@ -7,7 +7,7 @@ import SignatureCanvas from 'react-signature-canvas'
 
 type StickerRequest = {
   id: string
-  vehicle_plate: string
+  vehicle_plate_number: string
   vehicle_make: string | null
   vehicle_color: string | null
   owner_name: string
@@ -99,7 +99,7 @@ export default function StickerDistributionModal({ request, onClose }: Props) {
               </div>
               <div>
                 <p className="text-gray-600">Vehicle Plate:</p>
-                <p className="font-medium">{request.vehicle_plate}</p>
+                <p className="font-medium">{request.vehicle_plate_number}</p>
               </div>
               <div>
                 <p className="text-gray-600">Vehicle:</p>
