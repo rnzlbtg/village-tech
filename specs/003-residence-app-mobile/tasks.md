@@ -18,12 +18,12 @@
 
 **Purpose**: Flutter project initialization and basic structure
 
-- [ ] T001 Create Flutter project structure at apps/residence/ with standard directories (lib/, test/, android/, ios/)
-- [ ] T002 Initialize Flutter project with pubspec.yaml dependencies: supabase_flutter, riverpod, go_router, hive, flutter_image_compress, firebase_messaging
-- [ ] T003 [P] Configure Firebase for iOS (GoogleService-Info.plist in ios/Runner/)
-- [ ] T004 [P] Configure Firebase for Android (google-services.json in android/app/)
-- [ ] T005 [P] Configure linting and formatting with analysis_options.yaml
-- [ ] T006 [P] Create .env.example with SUPABASE_URL and SUPABASE_ANON_KEY placeholders
+- [X] T001 Create Flutter project structure at apps/residence/ with standard directories (lib/, test/, android/, ios/)
+- [X] T002 Initialize Flutter project with pubspec.yaml dependencies: supabase_flutter, riverpod, go_router, hive, flutter_image_compress, firebase_messaging
+- [X] T003 [P] Configure Firebase for iOS (GoogleService-Info.plist in ios/Runner/)
+- [X] T004 [P] Configure Firebase for Android (google-services.json in android/app/)
+- [X] T005 [P] Configure linting and formatting with analysis_options.yaml
+- [X] T006 [P] Create .env.example with SUPABASE_URL and SUPABASE_ANON_KEY placeholders
 
 ---
 
@@ -33,9 +33,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create Supabase client singleton service in lib/services/supabase_service.dart with authentication state
-- [ ] T008 Implement authentication flow with email/password in lib/providers/auth_provider.dart using Riverpod
-- [ ] T009 Create offline cache service in lib/services/offline_cache_service.dart using Hive with three boxes (household_data, sticker_data, guest_data)
+- [X] T00 Create Supabase client singleton service in lib/services/supabase_service.dart with authentication state
+- [X] T00 Implement authentication flow with email/password in lib/providers/auth_provider.dart using Riverpod
+- [X] T00 Create offline cache service in lib/services/offline_cache_service.dart using Hive with three boxes (household_data, sticker_data, guest_data)
 - [ ] T010 Initialize Firebase Cloud Messaging in lib/services/notification_service.dart with token registration and foreground/background handlers
 - [ ] T011 Create photo upload service in lib/services/photo_upload_service.dart with flutter_image_compress and Supabase Storage integration
 - [ ] T012 Setup go_router navigation with route definitions in lib/app.dart
