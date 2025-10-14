@@ -1,5 +1,12 @@
+import 'package:flutter/material.dart';
+
 /// Application constants
 class AppConstants {
+  // Color Scheme - Village Tech Branding
+  static const Color primaryColor = Color(0xFF105640); // Rich forest green
+  static const Color secondaryColor = Color(0xFF2D7D5C); // Lighter green
+  static const Color accentColor = Color(0xFFF59E0B); // Warm amber
+
   // Storage Bucket Names
   static const String userPhotosBucket = 'user-photos';
 
