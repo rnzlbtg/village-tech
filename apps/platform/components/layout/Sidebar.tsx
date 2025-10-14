@@ -13,6 +13,7 @@ import {
   HelpCircle,
   FileText,
   X,
+  Shield,
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -39,24 +40,19 @@ export default function Sidebar({ isOpen = true, onClose, isMobile = false }: Si
       path: '/dashboard',
     },
     {
-      name: 'Communities',
+      name: 'Tenant Management',
       icon: Building,
       path: '/tenants',
     },
     {
-      name: 'Users',
+      name: 'Gate Management',
+      icon: Shield,
+      path: '/gates',
+    },
+    {
+      name: 'User Provisioning',
       icon: Users,
       path: '/users',
-      submenu: [
-        {
-          name: 'All Users',
-          path: '/users',
-        },
-        {
-          name: 'Roles',
-          path: '/users/roles',
-        },
-      ],
     },
     {
       name: 'Audit Logs',
@@ -91,10 +87,7 @@ export default function Sidebar({ isOpen = true, onClose, isMobile = false }: Si
       <>
         {/* Overlay */}
         {isOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-            onClick={onClose}
-          />
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" onClick={onClose} />
         )}
 
         {/* Slide-in sidebar */}
@@ -136,7 +129,9 @@ export default function Sidebar({ isOpen = true, onClose, isMobile = false }: Si
                                 isActive(item.path) ? 'text-primary' : 'text-gray-500'
                               }`}
                             />
-                            <span className={`${isActive(item.path) ? 'font-medium text-primary' : ''}`}>
+                            <span
+                              className={`${isActive(item.path) ? 'font-medium text-primary' : ''}`}
+                            >
                               {item.name}
                             </span>
                           </div>
@@ -174,7 +169,9 @@ export default function Sidebar({ isOpen = true, onClose, isMobile = false }: Si
                         <item.icon
                           className={`h-5 w-5 mr-3 ${isActive(item.path) ? 'text-primary' : 'text-gray-500'}`}
                         />
-                        <span className={`${isActive(item.path) ? 'font-medium text-primary' : ''}`}>
+                        <span
+                          className={`${isActive(item.path) ? 'font-medium text-primary' : ''}`}
+                        >
                           {item.name}
                         </span>
                       </Link>

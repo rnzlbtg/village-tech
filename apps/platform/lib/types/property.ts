@@ -2,12 +2,10 @@ export interface Property {
   id: string
   tenant_id: string
   name: string
-  address: string
-  property_type?: 'residential' | 'commercial' | 'mixed'
+  address?: string
+  description?: string
+  property_type?: 'building' | 'lot' | 'section' | 'phase'
   total_units?: number
-  total_floors?: number
-  year_built?: number
-  lot_size?: number
   created_at: string
   updated_at: string
 }

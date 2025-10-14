@@ -10,15 +10,28 @@ interface GateFormProps {
   tenantId: string
   initialData?: Gate
   mode: 'create' | 'edit'
+  onSuccess?: () => void
 }
 
-export default function GateForm({ tenantId, initialData, mode }: GateFormProps) {
+export default function GateForm({ tenantId, initialData, mode, onSuccess }: GateFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [equipmentConfig, setEquipmentConfig] = useState(
-    initialData?.equipment_config ? JSON.stringify(initialData.equipment_config, null, 2) : ''
+
+  // Extract common RFID settings from equipment_config
+  const existingConfig = initialData?.equipment_config || {}
+  const [rfidEnabled, setRfidEnabled] = useState(existingConfig?.rfid_reader?.enabled ?? true)
+  const [rfidIp, setRfidIp] = useState(existingConfig?.rfid_reader?.connection_ip || '')
+  const [rfidPort, setRfidPort] = useState(existingConfig?.rfid_reader?.port || '9000')
+  const [rfidReadRange, setRfidReadRange] = useState(existingConfig?.rfid_reader?.read_range || '5')
+  const [rfidFrequency, setRfidFrequency] = useState(existingConfig?.rfid_reader?.frequency || '13.56')
+
+  // Advanced settings in JSON
+  const advancedDefaults = { ...existingConfig }
+  delete advancedDefaults.rfid_reader
+  const [advancedConfig, setAdvancedConfig] = useState(
+    Object.keys(advancedDefaults).length > 0 ? JSON.stringify(advancedDefaults, null, 2) : ''
   )
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,17 +42,48 @@ export default function GateForm({ tenantId, initialData, mode }: GateFormProps)
 
     const formData = new FormData(e.currentTarget)
     formData.append('tenant_id', tenantId)
-    formData.set('equipment_config', equipmentConfig)
+
+    // Build combined equipment config from structured fields + advanced JSON
+    const equipmentConfig: any = {
+      rfid_reader: {
+        enabled: rfidEnabled,
+        connection_ip: rfidIp,
+        port: rfidPort,
+        read_range: rfidReadRange,
+        frequency: rfidFrequency,
+      },
+    }
+
+    // Merge advanced JSON config if provided
+    if (advancedConfig.trim()) {
+      try {
+        const advancedParsed = JSON.parse(advancedConfig)
+        Object.assign(equipmentConfig, advancedParsed)
+      } catch (err) {
+        setError('Invalid JSON in advanced configuration')
+        setLoading(false)
+        return
+      }
+    }
+
+    formData.set('equipment_config', JSON.stringify(equipmentConfig))
 
     try {
       const result = mode === 'create' ? await createGate(formData) : await updateGate(formData)
 
       if (result.success) {
         setSuccess(true)
-        setTimeout(() => {
-          router.push(`/tenants/${tenantId}/gates`)
-          router.refresh()
-        }, 1500)
+        if (onSuccess) {
+          setTimeout(() => {
+            router.refresh()
+            onSuccess()
+          }, 1500)
+        } else {
+          setTimeout(() => {
+            router.push(`/tenants/${tenantId}/gates`)
+            router.refresh()
+          }, 1500)
+        }
       } else {
         setError(result.error || 'An error occurred')
       }
@@ -153,20 +197,101 @@ export default function GateForm({ tenantId, initialData, mode }: GateFormProps)
             Equipment Configuration
           </h2>
 
+          {/* Common RFID Settings - Structured Form */}
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <h3 className="text-lg font-medium text-gray-800 mb-4">RFID Reader Settings</h3>
+
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rfid_enabled"
+                  checked={rfidEnabled}
+                  onChange={(e) => setRfidEnabled(e.target.checked)}
+                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                />
+                <label htmlFor="rfid_enabled" className="ml-2 block text-sm text-gray-700">
+                  Enable RFID Reader
+                </label>
+              </div>
+
+              {rfidEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label htmlFor="rfid_ip" className="block text-sm font-medium text-gray-700 mb-1">
+                      Connection IP Address
+                    </label>
+                    <input
+                      type="text"
+                      id="rfid_ip"
+                      value={rfidIp}
+                      onChange={(e) => setRfidIp(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 192.168.1.100"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rfid_port" className="block text-sm font-medium text-gray-700 mb-1">
+                      Port
+                    </label>
+                    <input
+                      type="text"
+                      id="rfid_port"
+                      value={rfidPort}
+                      onChange={(e) => setRfidPort(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 9000"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rfid_read_range" className="block text-sm font-medium text-gray-700 mb-1">
+                      Read Range (meters)
+                    </label>
+                    <input
+                      type="text"
+                      id="rfid_read_range"
+                      value={rfidReadRange}
+                      onChange={(e) => setRfidReadRange(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 5"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rfid_frequency" className="block text-sm font-medium text-gray-700 mb-1">
+                      Frequency (MHz)
+                    </label>
+                    <input
+                      type="text"
+                      id="rfid_frequency"
+                      value={rfidFrequency}
+                      onChange={(e) => setRfidFrequency(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 13.56"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Advanced Settings - JSON Editor */}
           <div>
-            <label htmlFor="equipment_config" className="block text-sm font-medium text-gray-700 mb-1">
-              Equipment Settings (JSON)
+            <label htmlFor="advanced_config" className="block text-sm font-medium text-gray-700 mb-1">
+              Advanced Equipment Settings (JSON)
             </label>
             <textarea
-              id="equipment_config"
-              value={equipmentConfig}
-              onChange={(e) => setEquipmentConfig(e.target.value)}
-              rows={8}
+              id="advanced_config"
+              value={advancedConfig}
+              onChange={(e) => setAdvancedConfig(e.target.value)}
+              rows={6}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-              placeholder={`{\n  "rfid_reader": {\n    "enabled": true,\n    "model": "HID R90"\n  },\n  "camera": {\n    "enabled": true,\n    "resolution": "1080p"\n  }\n}`}
+              placeholder={`{\n  "camera": {\n    "enabled": true,\n    "resolution": "1080p",\n    "recording": true\n  },\n  "barrier": {\n    "type": "automatic",\n    "speed": "normal"\n  }\n}`}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Configure RFID readers, cameras, and other equipment in JSON format
+              Optional: Configure cameras, barriers, and other equipment in JSON format
             </p>
           </div>
         </div>

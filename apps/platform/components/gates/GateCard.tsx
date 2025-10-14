@@ -1,13 +1,13 @@
-import Link from 'next/link'
 import { Gate } from '@/lib/types/gate'
 import { DoorOpen, MapPin, Settings } from 'lucide-react'
 
 interface GateCardProps {
   gate: Gate
   tenantId: string
+  onEditClick?: (gate: Gate) => void
 }
 
-export default function GateCard({ gate, tenantId }: GateCardProps) {
+export default function GateCard({ gate, tenantId, onEditClick }: GateCardProps) {
   const statusColors = {
     active: 'bg-green-100 text-green-800',
     maintenance: 'bg-yellow-100 text-yellow-800',
@@ -22,10 +22,16 @@ export default function GateCard({ gate, tenantId }: GateCardProps) {
     emergency: 'Emergency',
   }
 
+  const handleClick = () => {
+    if (onEditClick) {
+      onEditClick(gate)
+    }
+  }
+
   return (
-    <Link
-      href={`/tenants/${tenantId}/gates/${gate.id}`}
-      className="block bg-white border rounded-lg p-6 hover:shadow-lg transition-shadow duration-200"
+    <div
+      onClick={handleClick}
+      className="block bg-white border rounded-lg p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
@@ -64,6 +70,6 @@ export default function GateCard({ gate, tenantId }: GateCardProps) {
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   )
 }

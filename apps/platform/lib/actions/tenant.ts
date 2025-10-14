@@ -149,24 +149,52 @@ export async function updateTenant(formData: FormData) {
   }
 }
 
-export async function deleteTenant(tenantId: string) {
+export async function deleteTenant(tenantId: string, forceDelete: boolean = false) {
   try {
     // Check authorization
     await requireSuperAdmin()
 
     const supabase = await createClient()
 
-    // Check if tenant has associated data (properties, users, etc.)
-    const { count: propertyCount } = await supabase
-      .from('properties')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
+    // FR-013: Check for active residents and ongoing operations
+    const checks = await Promise.all([
+      supabase
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .in('role', ['household_head', 'guard']),
+      supabase
+        .from('properties')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId),
+      supabase
+        .from('gates')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('operational_status', 'active'),
+    ])
 
-    if (propertyCount && propertyCount > 0) {
+    const activeUserCount = checks[0].count || 0
+    const propertyCount = checks[1].count || 0
+    const activeGateCount = checks[2].count || 0
+
+    // Prevent deletion if active residents or operations exist (unless force confirmed)
+    if (!forceDelete && (activeUserCount > 0 || activeGateCount > 0)) {
+      const reasons = []
+      if (activeUserCount > 0) reasons.push(`${activeUserCount} active resident(s)`)
+      if (activeGateCount > 0) reasons.push(`${activeGateCount} active gate(s)`)
+      if (propertyCount > 0) reasons.push(`${propertyCount} property/properties`)
+
       return {
         success: false,
-        error:
-          'Cannot delete tenant with existing properties. Please remove all properties first.',
+        error: `Cannot delete tenant with ${reasons.join(', ')}. Deactivate users and gates first, or confirm forced deletion.`,
+        requiresConfirmation: true,
+        details: {
+          activeUsers: activeUserCount,
+          properties: propertyCount,
+          activeGates: activeGateCount,
+        },
       }
     }
 

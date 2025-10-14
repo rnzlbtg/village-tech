@@ -95,21 +95,30 @@ A platform super administrator defines association-level settings, rules, and op
 - How does the system prevent orphaned admin users when a tenant is deactivated?
 - What happens when concurrent platform admins attempt to modify the same tenant configuration?
 
+## Clarifications
+
+### Session 2025-10-13
+
+- Q: FR-003 "completely segregated" - What level of isolation is required? → A: Row-Level Security (RLS) - PostgreSQL RLS policies prevent cross-tenant queries at database level
+- Q: FR-007 "operational parameters" - What configuration interface is needed for RFID equipment settings? → A: Hybrid - Form for common settings + JSON editor for advanced parameters
+- Q: FR-011 "fees, rules, and operational parameters" - What specific settings are required? → A: Fee structures only - Monthly/quarterly/annual amounts, due dates, late fees
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: System MUST allow platform super administrators to create new tenants with unique identifiers
-- **FR-002**: System MUST capture tenant details including community name, physical address, contact information, and billing information
-- **FR-003**: System MUST support multi-tenant data isolation ensuring each tenant's data is completely segregated
+- **FR-002**: System MUST capture tenant details including community name, physical address, contact information, billing information, and subscription status (active/trial/inactive/suspended)
+- **FR-002a**: System MAY optionally track subscription metadata (plan name, max users, max residences) for future SaaS billing features without enforcing limits
+- **FR-003**: System MUST support multi-tenant data isolation using PostgreSQL Row-Level Security (RLS) policies that prevent cross-tenant queries at the database level, ensuring each tenant's data is completely segregated with zero data leakage
 - **FR-004**: System MUST allow definition of property structures including buildings, lots, and residence units
 - **FR-005**: System MUST assign unique identifiers to each residence unit within a tenant (e.g., unit numbers, lot numbers, addresses)
 - **FR-006**: System MUST allow creation and configuration of gate entrances with names, locations, and physical descriptions
-- **FR-007**: System MUST support configuration of gate equipment including RFID readers and their operational parameters
+- **FR-007**: System MUST support configuration of gate equipment including RFID readers and their operational parameters via hybrid interface: structured form fields for common settings (connection IP, port, read range, frequency) with JSON editor for advanced parameters
 - **FR-008**: System MUST allow creation of admin head users with full administrative privileges for their assigned tenant
 - **FR-009**: System MUST allow creation of admin officer users with limited administrative privileges for their assigned tenant
 - **FR-010**: System MUST enforce unique email addresses across all user accounts
-- **FR-011**: System MUST support configuration of association-level settings including fees, rules, and operational parameters
+- **FR-011**: System MUST support configuration of association fee structures including monthly/quarterly/annual fee amounts, due dates, and late fee penalties
 - **FR-012**: System MUST maintain audit logs of all configuration changes made by platform administrators
 - **FR-013**: System MUST prevent deletion of tenants that have active residents or ongoing operations without explicit confirmation
 - **FR-014**: System MUST validate all input data for completeness and format before persisting
