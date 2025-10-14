@@ -11,9 +11,10 @@ interface UserFormProps {
   initialData?: User
   mode: 'create' | 'edit'
   tenants: Array<{ id: string; name: string }>
+  onSuccess?: () => void
 }
 
-export default function UserForm({ initialData, mode, tenants }: UserFormProps) {
+export default function UserForm({ initialData, mode, tenants, onSuccess }: UserFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

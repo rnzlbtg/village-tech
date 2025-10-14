@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git checkout:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Bash(supabase migration:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,176 +1,17 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createPropertySchema, updatePropertySchema } from '@/lib/validations/property'
+import { getTenantId } from '@/lib/auth/helpers'
 import { revalidatePath } from 'next/cache'
-import { requireSuperAdmin } from '@/lib/auth/helpers'
 
-export async function createProperty(formData: FormData) {
+export async function getProperties() {
   try {
-    await requireSuperAdmin()
-
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
-
-    const data = createPropertySchema.parse({
-      tenant_id: formData.get('tenant_id'),
-      name: formData.get('name'),
-      address: formData.get('address'),
-      property_type: formData.get('property_type') || undefined,
-      total_units: formData.get('total_units')
-        ? parseInt(formData.get('total_units') as string)
-        : undefined,
-      total_floors: formData.get('total_floors')
-        ? parseInt(formData.get('total_floors') as string)
-        : undefined,
-      year_built: formData.get('year_built')
-        ? parseInt(formData.get('year_built') as string)
-        : undefined,
-      lot_size: formData.get('lot_size')
-        ? parseFloat(formData.get('lot_size') as string)
-        : undefined,
-    })
-
-    const { data: property, error } = await supabase
-      .from('properties')
-      .insert([data])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating property:', error)
-      return {
-        success: false,
-        error: error.message,
-      }
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      throw new Error('No tenant ID found')
     }
 
-    revalidatePath(`/tenants/${data.tenant_id}/properties`)
-
-    return {
-      success: true,
-      data: property,
-    }
-  } catch (error) {
-    console.error('Error in createProperty:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create property',
-    }
-  }
-}
-
-export async function updateProperty(formData: FormData) {
-  try {
-    await requireSuperAdmin()
-
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
-
-    const data = updatePropertySchema.parse({
-      id: formData.get('id'),
-      tenant_id: formData.get('tenant_id') || undefined,
-      name: formData.get('name') || undefined,
-      address: formData.get('address') || undefined,
-      property_type: formData.get('property_type') || undefined,
-      total_units: formData.get('total_units')
-        ? parseInt(formData.get('total_units') as string)
-        : undefined,
-      total_floors: formData.get('total_floors')
-        ? parseInt(formData.get('total_floors') as string)
-        : undefined,
-      year_built: formData.get('year_built')
-        ? parseInt(formData.get('year_built') as string)
-        : undefined,
-      lot_size: formData.get('lot_size')
-        ? parseFloat(formData.get('lot_size') as string)
-        : undefined,
-    })
-
-    const { id, ...updateData } = data
-
-    const { data: property, error } = await supabase
-      .from('properties')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error updating property:', error)
-      return {
-        success: false,
-        error: error.message,
-      }
-    }
-
-    revalidatePath(`/tenants/${property.tenant_id}/properties`)
-
-    return {
-      success: true,
-      data: property,
-    }
-  } catch (error) {
-    console.error('Error in updateProperty:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update property',
-    }
-  }
-}
-
-export async function deleteProperty(propertyId: string) {
-  try {
-    await requireSuperAdmin()
-
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
-
-    // Check if property has residences
-    const { count } = await supabase
-      .from('residence_units')
-      .select('*', { count: 'exact', head: true })
-      .eq('property_id', propertyId)
-
-    if (count && count > 0) {
-      return {
-        success: false,
-        error: `Cannot delete property with ${count} residence unit(s). Please delete all units first.`,
-      }
-    }
-
-    const { error } = await supabase
-      .from('properties')
-      .delete()
-      .eq('id', propertyId)
-
-    if (error) {
-      console.error('Error deleting property:', error)
-      return {
-        success: false,
-        error: error.message,
-      }
-    }
-
-    revalidatePath('/tenants')
-
-    return {
-      success: true,
-    }
-  } catch (error) {
-    console.error('Error in deleteProperty:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete property',
-    }
-  }
-}
-
-export async function getProperties(tenantId: string) {
-  try {
-    // Use admin client to bypass RLS for super admin access
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
+    const supabase = await createClient()
 
     const { data: properties, error } = await supabase
       .from('properties')
@@ -195,14 +36,18 @@ export async function getProperties(tenantId: string) {
 
 export async function getProperty(propertyId: string) {
   try {
-    // Use admin client to bypass RLS for super admin access
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      throw new Error('No tenant ID found')
+    }
+
+    const supabase = await createClient()
 
     const { data: property, error } = await supabase
       .from('properties')
       .select('*')
       .eq('id', propertyId)
+      .eq('tenant_id', tenantId)
       .single()
 
     if (error) {
@@ -216,6 +61,172 @@ export async function getProperty(propertyId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch property',
+    }
+  }
+}
+
+export async function createProperty(formData: FormData) {
+  try {
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      throw new Error('No tenant ID found')
+    }
+
+    const supabase = await createClient()
+
+    const data = {
+      tenant_id: tenantId,
+      name: formData.get('name') as string,
+      address: formData.get('address') as string,
+      property_type: formData.get('property_type') as string || undefined,
+      total_units: formData.get('total_units')
+        ? parseInt(formData.get('total_units') as string)
+        : undefined,
+      total_floors: formData.get('total_floors')
+        ? parseInt(formData.get('total_floors') as string)
+        : undefined,
+      year_built: formData.get('year_built')
+        ? parseInt(formData.get('year_built') as string)
+        : undefined,
+      lot_size: formData.get('lot_size')
+        ? parseFloat(formData.get('lot_size') as string)
+        : undefined,
+    }
+
+    const { data: property, error } = await supabase
+      .from('properties')
+      .insert([data])
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating property:', error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+
+    revalidatePath('/properties')
+
+    return {
+      success: true,
+      data: property,
+    }
+  } catch (error) {
+    console.error('Error in createProperty:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create property',
+    }
+  }
+}
+
+export async function updateProperty(propertyId: string, formData: FormData) {
+  try {
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      throw new Error('No tenant ID found')
+    }
+
+    const supabase = await createClient()
+
+    const data = {
+      name: formData.get('name') as string,
+      address: formData.get('address') as string,
+      property_type: formData.get('property_type') as string || undefined,
+      total_units: formData.get('total_units')
+        ? parseInt(formData.get('total_units') as string)
+        : undefined,
+      total_floors: formData.get('total_floors')
+        ? parseInt(formData.get('total_floors') as string)
+        : undefined,
+      year_built: formData.get('year_built')
+        ? parseInt(formData.get('year_built') as string)
+        : undefined,
+      lot_size: formData.get('lot_size')
+        ? parseFloat(formData.get('lot_size') as string)
+        : undefined,
+    }
+
+    const { data: property, error } = await supabase
+      .from('properties')
+      .update(data)
+      .eq('id', propertyId)
+      .eq('tenant_id', tenantId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating property:', error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+
+    revalidatePath('/properties')
+    revalidatePath(`/properties/${propertyId}`)
+
+    return {
+      success: true,
+      data: property,
+    }
+  } catch (error) {
+    console.error('Error in updateProperty:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update property',
+    }
+  }
+}
+
+export async function deleteProperty(propertyId: string) {
+  try {
+    const tenantId = await getTenantId()
+    if (!tenantId) {
+      throw new Error('No tenant ID found')
+    }
+
+    const supabase = await createClient()
+
+    // Check if property has residence units
+    const { count } = await supabase
+      .from('residence_units')
+      .select('*', { count: 'exact', head: true })
+      .eq('property_id', propertyId)
+
+    if (count && count > 0) {
+      return {
+        success: false,
+        error: `Cannot delete property with ${count} residence unit(s). Please delete all units first.`,
+      }
+    }
+
+    const { error } = await supabase
+      .from('properties')
+      .delete()
+      .eq('id', propertyId)
+      .eq('tenant_id', tenantId)
+
+    if (error) {
+      console.error('Error deleting property:', error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+
+    revalidatePath('/properties')
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error('Error in deleteProperty:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete property',
     }
   }
 }

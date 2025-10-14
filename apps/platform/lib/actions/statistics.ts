@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function getTenantStatistics(tenantId: string) {
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS for super admin access
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     // Get property count
     const { count: propertyCount } = await supabase
