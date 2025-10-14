@@ -5,9 +5,10 @@ import { DoorOpen } from 'lucide-react'
 interface GateListProps {
   gates: Gate[]
   tenantId: string
+  onEditGate?: (gate: Gate) => void
 }
 
-export default function GateList({ gates, tenantId }: GateListProps) {
+export default function GateList({ gates, tenantId, onEditGate }: GateListProps) {
   if (gates.length === 0) {
     return (
       <div className="bg-white rounded-lg border p-12 text-center">
@@ -23,7 +24,7 @@ export default function GateList({ gates, tenantId }: GateListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {gates.map((gate) => (
-        <GateCard key={gate.id} gate={gate} tenantId={tenantId} />
+        <GateCard key={gate.id} gate={gate} tenantId={tenantId} onEditClick={onEditGate} />
       ))}
     </div>
   )

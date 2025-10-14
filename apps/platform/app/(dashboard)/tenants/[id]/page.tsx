@@ -5,6 +5,8 @@ import { getTenant } from '@/lib/actions/tenant'
 import { getTenantStatistics } from '@/lib/actions/statistics'
 import { getAdminUsers } from '@/lib/actions/admin-user'
 import { getGates } from '@/lib/actions/gate'
+import { getProperties } from '@/lib/actions/property'
+import { getAssociationSettings } from '@/lib/actions/association-settings'
 import TenantDetailTabs from '@/components/tenants/TenantDetailTabs'
 
 interface TenantDetailPageProps {
@@ -13,7 +15,8 @@ interface TenantDetailPageProps {
   }
 }
 
-export default async function TenantDetailPage({ params }: TenantDetailPageProps) {
+export default async function TenantDetailPage(props: TenantDetailPageProps) {
+  const params = await props.params
   const result = await getTenant(params.id)
 
   if (!result.success || !result.data) {
@@ -25,6 +28,9 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
   const stats = statsResult.success ? statsResult.data : null
   const adminUsers = await getAdminUsers(params.id)
   const gates = await getGates(params.id)
+  const properties = await getProperties(params.id)
+  const associationSettingsResult = await getAssociationSettings(params.id)
+  const associationSettings = associationSettingsResult.success ? associationSettingsResult.data : undefined
 
   return (
     <div className="space-y-6">
@@ -107,7 +113,9 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
         tenant={tenant}
         adminUsers={adminUsers}
         gates={gates}
+        properties={properties}
         tenantId={params.id}
+        associationSettings={associationSettings}
       />
     </div>
   )

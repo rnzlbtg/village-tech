@@ -82,6 +82,27 @@ export async function createAdminUser(formData: FormData) {
       }
     }
 
+    // Create user role assignment
+    const { error: roleError } = await supabase.from('user_roles').insert([
+      {
+        user_id: authUser.user.id,
+        tenant_id: data.tenant_id,
+        role: data.role,
+        is_active: true,
+      },
+    ])
+
+    if (roleError) {
+      console.error('Error creating user role:', roleError)
+      // Rollback: delete profile and auth user
+      await supabase.from('user_profiles').delete().eq('id', authUser.user.id)
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      return {
+        success: false,
+        error: roleError.message,
+      }
+    }
+
     revalidatePath(`/tenants/${data.tenant_id}/admin-users`)
 
     return {

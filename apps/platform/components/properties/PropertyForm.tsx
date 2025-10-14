@@ -10,9 +10,10 @@ interface PropertyFormProps {
   tenantId: string
   initialData?: Property
   mode: 'create' | 'edit'
+  onSuccess?: () => void
 }
 
-export default function PropertyForm({ tenantId, initialData, mode }: PropertyFormProps) {
+export default function PropertyForm({ tenantId, initialData, mode, onSuccess }: PropertyFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,8 +34,12 @@ export default function PropertyForm({ tenantId, initialData, mode }: PropertyFo
       if (result.success) {
         setSuccess(true)
         setTimeout(() => {
-          router.push(`/tenants/${tenantId}/properties`)
-          router.refresh()
+          if (onSuccess) {
+            onSuccess()
+          } else {
+            router.push(`/tenants/${tenantId}/properties`)
+            router.refresh()
+          }
         }, 1500)
       } else {
         setError(result.error || 'An error occurred')
@@ -100,104 +105,62 @@ export default function PropertyForm({ tenantId, initialData, mode }: PropertyFo
               <select
                 id="property_type"
                 name="property_type"
-                defaultValue={initialData?.property_type || 'residential'}
+                defaultValue={initialData?.property_type || 'building'}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                <option value="residential">Residential</option>
-                <option value="commercial">Commercial</option>
-                <option value="mixed">Mixed Use</option>
+                <option value="building">Building</option>
+                <option value="lot">Lot</option>
+                <option value="section">Section</option>
+                <option value="phase">Phase</option>
               </select>
             </div>
           </div>
 
           <div className="mt-4">
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-              Address *
+              Address
             </label>
             <input
               type="text"
               id="address"
               name="address"
-              required
               defaultValue={initialData?.address}
               className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="e.g., 123 Main Street, Building A"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
-            <div>
-              <label htmlFor="total_units" className="block text-sm font-medium text-gray-700 mb-1">
-                Total Units
-              </label>
-              <input
-                type="number"
-                id="total_units"
-                name="total_units"
-                min="1"
-                defaultValue={initialData?.total_units || ''}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., 50"
-              />
-            </div>
+          <div className="mt-4">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              rows={3}
+              defaultValue={initialData?.description}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Optional description of the property"
+            />
+          </div>
 
-            <div>
-              <label htmlFor="total_floors" className="block text-sm font-medium text-gray-700 mb-1">
-                Total Floors
-              </label>
-              <input
-                type="number"
-                id="total_floors"
-                name="total_floors"
-                min="1"
-                defaultValue={initialData?.total_floors || ''}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., 5"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="year_built" className="block text-sm font-medium text-gray-700 mb-1">
-                Year Built
-              </label>
-              <input
-                type="number"
-                id="year_built"
-                name="year_built"
-                min="1800"
-                max={new Date().getFullYear()}
-                defaultValue={initialData?.year_built || ''}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder={new Date().getFullYear().toString()}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="lot_size" className="block text-sm font-medium text-gray-700 mb-1">
-                Lot Size (sq m)
-              </label>
-              <input
-                type="number"
-                id="lot_size"
-                name="lot_size"
-                min="0"
-                step="0.01"
-                defaultValue={initialData?.lot_size || ''}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g., 5000"
-              />
-            </div>
+          <div className="mt-4">
+            <label htmlFor="total_units" className="block text-sm font-medium text-gray-700 mb-1">
+              Total Units
+            </label>
+            <input
+              type="number"
+              id="total_units"
+              name="total_units"
+              min="0"
+              defaultValue={initialData?.total_units || ''}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="e.g., 50"
+            />
           </div>
         </div>
 
-        <div className="flex justify-between space-x-4 pt-6 border-t">
-          <button
-            type="button"
-            onClick={() => router.push(`/tenants/${tenantId}/properties`)}
-            className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-          >
-            Cancel
-          </button>
+        <div className="flex justify-end space-x-4 pt-6 border-t">
           <button
             type="submit"
             disabled={loading}

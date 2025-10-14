@@ -35,13 +35,19 @@ export async function createClient() {
  * for administrative operations like creating users
  */
 export function createAdminClient() {
-  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!serviceRoleKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
+  // Debug: Log the key format (first 20 chars)
+  console.log('Service Role Key prefix:', serviceRoleKey.substring(0, 20))
+  console.log('Service Role Key segments:', serviceRoleKey.split('.').length)
+
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    serviceRoleKey,
     {
       auth: {
         autoRefreshToken: false,

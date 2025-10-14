@@ -23,9 +23,10 @@ interface UserProfile {
 
 interface UsersTableProps {
   users: UserProfile[]
+  tenantName?: string | null
 }
 
-export default function UsersTable({ users }: UsersTableProps) {
+export default function UsersTable({ users, tenantName }: UsersTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedRole, setSelectedRole] = useState('all')
@@ -110,7 +111,9 @@ export default function UsersTable({ users }: UsersTableProps) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-6 border-b flex flex-wrap justify-between items-center gap-4">
-        <h2 className="text-lg font-semibold text-gray-800">All Users</h2>
+        <h2 className="text-lg font-semibold text-gray-800">
+          {tenantName ? `Admin Users - ${tenantName}` : 'All Users'}
+        </h2>
         <div className="flex items-center space-x-3">
           <div className="relative">
             <input

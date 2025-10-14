@@ -9,9 +9,10 @@ interface AdminUserFormProps {
   tenantId: string
   initialData?: AdminUser
   mode: 'create' | 'edit'
+  onSuccess?: () => void
 }
 
-export default function AdminUserForm({ tenantId, initialData, mode }: AdminUserFormProps) {
+export default function AdminUserForm({ tenantId, initialData, mode, onSuccess }: AdminUserFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -26,45 +27,19 @@ export default function AdminUserForm({ tenantId, initialData, mode }: AdminUser
     is_active: initialData?.is_active ?? true,
   })
 
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-
-  const validatePassword = (password: string) => {
-    const errors: string[] = []
-    if (password.length > 0 && password.length < 8) {
-      errors.push('At least 8 characters')
-    }
-    if (password.length > 0 && !/[a-z]/.test(password)) {
-      errors.push('One lowercase letter')
-    }
-    if (password.length > 0 && !/[A-Z]/.test(password)) {
-      errors.push('One uppercase letter')
-    }
-    if (password.length > 0 && !/[0-9]/.test(password)) {
-      errors.push('One number')
-    }
-    if (password.length > 0 && !/[^a-zA-Z0-9]/.test(password)) {
-      errors.push('One special character')
-    }
-    setPasswordErrors(errors)
-  }
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
 
     setFormData((prev) => ({ ...prev, [name]: newValue }))
-
-    if (name === 'password') {
-      validatePassword(value)
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
-    if (mode === 'create' && passwordErrors.length > 0) {
-      setError('Please fix password validation errors')
+    if (mode === 'create' && formData.password.length < 6) {
+      setError('Temporary password must be at least 6 characters')
       return
     }
 
@@ -94,8 +69,13 @@ export default function AdminUserForm({ tenantId, initialData, mode }: AdminUser
         return
       }
 
-      router.push(`/tenants/${tenantId}/admin-users`)
-      router.refresh()
+      if (onSuccess) {
+        router.refresh()
+        onSuccess()
+      } else {
+        router.push(`/tenants/${tenantId}/admin-users`)
+        router.refresh()
+      }
     })
   }
 
@@ -158,7 +138,7 @@ export default function AdminUserForm({ tenantId, initialData, mode }: AdminUser
       {mode === 'create' && (
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password *
+            Temporary Password *
           </label>
           <input
             type="password"
@@ -167,18 +147,12 @@ export default function AdminUserForm({ tenantId, initialData, mode }: AdminUser
             value={formData.password}
             onChange={handleChange}
             required
+            minLength={6}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           />
-          {passwordErrors.length > 0 && (
-            <div className="mt-2 text-sm text-red-600">
-              <p className="font-medium">Password must contain:</p>
-              <ul className="list-disc list-inside">
-                {passwordErrors.map((err, idx) => (
-                  <li key={idx}>{err}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <p className="mt-1 text-sm text-gray-500">
+            Minimum 6 characters. User will be prompted to change on first login.
+          </p>
         </div>
       )}
 
@@ -245,7 +219,7 @@ export default function AdminUserForm({ tenantId, initialData, mode }: AdminUser
         </button>
         <button
           type="submit"
-          disabled={isPending || (mode === 'create' && passwordErrors.length > 0)}
+          disabled={isPending}
           className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50"
         >
           {isPending ? 'Saving...' : mode === 'create' ? 'Create Admin User' : 'Update Admin User'}

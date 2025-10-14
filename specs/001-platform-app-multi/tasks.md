@@ -247,6 +247,7 @@
 - [X] T137 Add performance monitoring for page load times
 - [X] T138 Run quickstart.md validation and verify all workflows
 - [X] T139 Update documentation with implementation notes
+- [X] T140 [FR-013] Implement delete prevention for tenants with active residents or ongoing operations in `apps/platform/lib/actions/tenant.ts`
 
 ---
 
@@ -348,7 +349,7 @@ With multiple developers:
 
 ## Summary Statistics
 
-**Total Tasks**: 139 tasks
+**Total Tasks**: 140 tasks
 **Parallelizable Tasks**: 52 tasks (37% can run in parallel)
 
 **Tasks by Phase**:
@@ -359,7 +360,7 @@ With multiple developers:
 - Phase 5 (User Story 3 - P2): 13 tasks
 - Phase 6 (User Story 4 - P2): 16 tasks
 - Phase 7 (User Story 5 - P3): 11 tasks
-- Phase 8 (Polish): 22 tasks
+- Phase 8 (Polish): 23 tasks
 
 **MVP Scope Recommendation**:
 - **Minimal MVP**: Phase 1 + Phase 2 + Phase 3 (User Story 1 only) = 52 tasks

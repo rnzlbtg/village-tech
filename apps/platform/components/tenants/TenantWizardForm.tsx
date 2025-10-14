@@ -155,17 +155,9 @@ export default function TenantWizardForm() {
       }
 
       if (!adminUser.password.trim()) {
-        newErrors['admin-password'] = 'Password is required'
-      } else if (adminUser.password.length < 8) {
-        newErrors['admin-password'] = 'Password must be at least 8 characters'
-      } else if (!/[A-Z]/.test(adminUser.password)) {
-        newErrors['admin-password'] = 'Password must contain at least one uppercase letter'
-      } else if (!/[a-z]/.test(adminUser.password)) {
-        newErrors['admin-password'] = 'Password must contain at least one lowercase letter'
-      } else if (!/[0-9]/.test(adminUser.password)) {
-        newErrors['admin-password'] = 'Password must contain at least one number'
-      } else if (!/[^a-zA-Z0-9]/.test(adminUser.password)) {
-        newErrors['admin-password'] = 'Password must contain at least one special character'
+        newErrors['admin-password'] = 'Temporary password is required'
+      } else if (adminUser.password.length < 6) {
+        newErrors['admin-password'] = 'Temporary password must be at least 6 characters'
       }
 
       if (!adminUser.first_name.trim()) {
@@ -193,15 +185,8 @@ export default function TenantWizardForm() {
     window.scrollTo(0, 0)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Only submit on step 4, otherwise just move to next step
-    if (currentStep < 4) {
-      return
-    }
-
-    if (!validateStep(currentStep)) {
+  const handleSubmit = async () => {
+    if (!validateStep(4)) {
       return
     }
 
@@ -378,7 +363,7 @@ export default function TenantWizardForm() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => e.preventDefault()}>
           {/* Step 1: Community Information */}
           {currentStep === 1 && (
             <div className="space-y-6">
@@ -773,8 +758,8 @@ export default function TenantWizardForm() {
                   <p className="mt-1 text-sm text-red-500">{fieldErrors['admin-password']}</p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Set a temporary password for the admin user. Must be 8+ characters with uppercase,
-                  lowercase, number, and special character.
+                  Set a temporary password for the admin user (minimum 6 characters). User will be
+                  prompted to change it on first login.
                 </p>
               </div>
 
@@ -935,7 +920,8 @@ export default function TenantWizardForm() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={isSubmitting}
                 className={`px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg flex items-center transition-colors duration-200 ${
                   isSubmitting ? 'opacity-70 cursor-not-allowed' : ''

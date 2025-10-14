@@ -2,18 +2,69 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Building2, Settings, DoorOpen, Users, Pencil, Eye } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, Settings, DoorOpen, Users, Pencil, Eye, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import { Tenant } from '@/lib/types/tenant'
+import { Gate } from '@/lib/types/gate'
+import { Property, PropertyWithCounts } from '@/lib/types/property'
+import GateForm from '@/components/gates/GateForm'
+import AdminUserForm from '@/components/admin-users/AdminUserForm'
+import AssociationSettingsForm from '@/components/association-settings/AssociationSettingsForm'
+import PropertyForm from '@/components/properties/PropertyForm'
+import PropertyList from '@/components/properties/PropertyList'
 
 interface TenantDetailTabsProps {
   tenant: Tenant
   adminUsers: any[]
-  gates: any[]
+  gates: Gate[]
+  properties: (Property | PropertyWithCounts)[]
   tenantId: string
+  associationSettings?: any
 }
 
-export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }: TenantDetailTabsProps) {
+export default function TenantDetailTabs({ tenant, adminUsers, gates, properties, tenantId, associationSettings }: TenantDetailTabsProps) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'details' | 'properties' | 'gates' | 'admin-users' | 'settings'>('details')
+  const [isGateModalOpen, setIsGateModalOpen] = useState(false)
+  const [editingGate, setEditingGate] = useState<Gate | null>(null)
+  const [isAdminUserModalOpen, setIsAdminUserModalOpen] = useState(false)
+  const [editingAdminUser, setEditingAdminUser] = useState<any | null>(null)
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false)
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null)
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(true)
+
+  const openGateModal = (gate?: Gate) => {
+    setEditingGate(gate || null)
+    setIsGateModalOpen(true)
+  }
+
+  const closeGateModal = () => {
+    setIsGateModalOpen(false)
+    setEditingGate(null)
+    router.refresh()
+  }
+
+  const openAdminUserModal = (user?: any) => {
+    setEditingAdminUser(user || null)
+    setIsAdminUserModalOpen(true)
+  }
+
+  const closeAdminUserModal = () => {
+    setIsAdminUserModalOpen(false)
+    setEditingAdminUser(null)
+    router.refresh()
+  }
+
+  const openPropertyModal = (property?: Property) => {
+    setEditingProperty(property || null)
+    setIsPropertyModalOpen(true)
+  }
+
+  const closePropertyModal = () => {
+    setIsPropertyModalOpen(false)
+    setEditingProperty(null)
+    router.refresh()
+  }
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -179,23 +230,15 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold text-gray-800">Properties</h2>
-              <Link
-                href={`/tenants/${tenantId}/properties/new`}
-                className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors"
+              <button
+                onClick={() => openPropertyModal()}
+                className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors flex items-center"
               >
+                <Plus className="h-4 w-4 mr-2" />
                 Add Property
-              </Link>
+              </button>
             </div>
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Properties management coming soon</p>
-              <Link
-                href={`/tenants/${tenantId}/properties`}
-                className="text-primary hover:text-secondary text-sm mt-2 inline-block"
-              >
-                Go to Properties Page →
-              </Link>
-            </div>
+            <PropertyList properties={properties} tenantId={tenantId} />
           </div>
         )}
 
@@ -204,12 +247,13 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold text-gray-800">Gates & Entrances</h2>
-              <Link
-                href={`/tenants/${tenantId}/gates/new`}
-                className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors"
+              <button
+                onClick={() => openGateModal()}
+                className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors flex items-center"
               >
+                <Plus className="h-4 w-4 mr-2" />
                 Add Gate
-              </Link>
+              </button>
             </div>
             {gates.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
@@ -261,12 +305,12 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          href={`/tenants/${tenantId}/gates/${gate.id}`}
+                        <button
+                          onClick={() => openGateModal(gate)}
                           className="text-primary hover:text-secondary"
                         >
-                          View
-                        </Link>
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -286,13 +330,13 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-lg font-semibold text-gray-800">Admin Users</h2>
-              <Link
-                href={`/tenants/${tenantId}/admin-users/new`}
+              <button
+                onClick={() => openAdminUserModal()}
                 className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg flex items-center transition-colors"
               >
                 <Users className="h-4 w-4 mr-2" />
                 Add Admin User
-              </Link>
+              </button>
             </div>
             {adminUsers.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
@@ -343,12 +387,12 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          href={`/tenants/${tenantId}/admin-users/${user.id}`}
+                        <button
+                          onClick={() => openAdminUserModal(user)}
                           className="text-primary hover:text-secondary"
                         >
-                          View
-                        </Link>
+                          Edit
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -366,20 +410,124 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, tenantId }
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-800 mb-6">Association Settings</h2>
-            <div className="text-center py-12">
-              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Settings management coming soon</p>
-              <Link
-                href={`/tenants/${tenantId}/settings`}
-                className="text-primary hover:text-secondary text-sm mt-2 inline-block"
+            <div
+              className="flex justify-between items-center mb-6 cursor-pointer group"
+              onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
+            >
+              <h2 className="text-lg font-semibold text-gray-800">Association Settings</h2>
+              <button
+                type="button"
+                className="text-gray-500 hover:text-gray-700 transition-colors"
               >
-                Go to Settings Page →
-              </Link>
+                {isSettingsExpanded ? (
+                  <ChevronUp className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
+              </button>
             </div>
+
+            {isSettingsExpanded && (
+              <div className="border rounded-lg p-6 bg-gray-50">
+                <AssociationSettingsForm
+                  tenantId={tenantId}
+                  initialData={associationSettings}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Gate Modal */}
+      {isGateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingGate ? 'Edit Gate' : 'Add New Gate'}
+              </h2>
+              <button
+                onClick={closeGateModal}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <GateForm
+                tenantId={tenantId}
+                initialData={editingGate || undefined}
+                mode={editingGate ? 'edit' : 'create'}
+                onSuccess={closeGateModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin User Modal */}
+      {isAdminUserModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingAdminUser ? 'Edit Admin User' : 'Add New Admin User'}
+              </h2>
+              <button
+                onClick={closeAdminUserModal}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <AdminUserForm
+                tenantId={tenantId}
+                initialData={editingAdminUser || undefined}
+                mode={editingAdminUser ? 'edit' : 'create'}
+                onSuccess={closeAdminUserModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Property Modal */}
+      {isPropertyModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">
+                {editingProperty ? 'Edit Property' : 'Add New Property'}
+              </h2>
+              <button
+                onClick={closePropertyModal}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <PropertyForm
+                tenantId={tenantId}
+                initialData={editingProperty || undefined}
+                mode={editingProperty ? 'edit' : 'create'}
+                onSuccess={closePropertyModal}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
