@@ -7,7 +7,7 @@ export const metadata = {
   description: 'Manage construction permits',
 }
 
-type PermitStatus = 'pending' | 'approved' | 'in_progress' | 'completed' | 'rejected' | 'on_hold'
+type PermitStatus = 'pending' | 'approved' | 'completed' | 'rejected' | 'on_hold'
 
 export default async function PermitsPage({
   searchParams,
@@ -30,10 +30,9 @@ export default async function PermitsPage({
       project_description,
       contractor_name,
       start_date,
-      end_date,
-      road_fee,
-      status,
-      payment_status,
+      estimated_end_date,
+      road_fee_amount,
+      permit_status,
       created_at,
       household:households!inner(
         id,
@@ -45,7 +44,7 @@ export default async function PermitsPage({
     .order('created_at', { ascending: false })
 
   if (searchParams.status) {
-    query = query.eq('status', searchParams.status)
+    query = query.eq('permit_status', searchParams.status)
   }
 
   const { data: permits, error } = await query
@@ -56,10 +55,10 @@ export default async function PermitsPage({
 
   const statusCounts = {
     all: permits?.length || 0,
-    pending: permits?.filter(p => p.status === 'pending').length || 0,
-    approved: permits?.filter(p => p.status === 'approved').length || 0,
-    in_progress: permits?.filter(p => p.status === 'in_progress').length || 0,
-    completed: permits?.filter(p => p.status === 'completed').length || 0,
+    pending: permits?.filter(p => p.permit_status === 'pending').length || 0,
+    approved: permits?.filter(p => p.permit_status === 'approved').length || 0,
+    in_progress: permits?.filter(p => p.permit_status === 'in_progress').length || 0,
+    completed: permits?.filter(p => p.permit_status === 'completed').length || 0,
   }
 
   return (
@@ -163,16 +162,18 @@ export default async function PermitsPage({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>{new Date(permit.start_date).toLocaleDateString()}</div>
-                      <div>to {new Date(permit.end_date).toLocaleDateString()}</div>
+                      <div>to {new Date(permit.estimated_end_date).toLocaleDateString()}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${permit.road_fee.toFixed(2)}
+                      ${permit.road_fee_amount ? Number(permit.road_fee_amount).toFixed(2) : '0.00'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={permit.status} />
+                      <StatusBadge status={permit.permit_status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <PaymentBadge status={permit.payment_status} />
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        N/A
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <a
@@ -250,20 +251,3 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function PaymentBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    unpaid: 'bg-red-100 text-red-800',
-    partial: 'bg-yellow-100 text-yellow-800',
-    paid: 'bg-green-100 text-green-800',
-  }
-
-  return (
-    <span
-      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-        colors[status] || 'bg-gray-100 text-gray-800'
-      }`}
-    >
-      {status}
-    </span>
-  )
-}

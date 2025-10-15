@@ -21,7 +21,7 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
     .from('construction_permits')
     .select(`
       *,
-      household:households!inner(
+      household:households(
         id,
         household_name,
         household_head_id,
@@ -30,9 +30,6 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
           unit_number,
           property:properties(name)
         )
-      ),
-      approved_by_user:user_profiles!construction_permits_approved_by_fkey(
-        full_name
       )
     `)
     .eq('id', params.id)
@@ -40,13 +37,26 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
     .single()
 
   if (error || !permit) {
+    console.error('Permit fetch error:', error)
     return (
       <div className="container mx-auto py-6">
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
           Permit not found
+          {error && <div className="text-sm mt-2">Error: {error.message}</div>}
         </div>
       </div>
     )
+  }
+
+  // Fetch approved_by user if exists
+  let approvedByUser = null
+  if (permit.approved_by) {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('first_name, last_name')
+      .eq('id', permit.approved_by)
+      .single()
+    approvedByUser = data
   }
 
   const authorizedWorkers = Array.isArray(permit.authorized_workers)
@@ -83,18 +93,20 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
               <div>
                 <label className="text-sm font-medium text-gray-500">Permit Status</label>
                 <div className="mt-1">
-                  <StatusBadge status={permit.status} />
+                  <StatusBadge status={permit.permit_status} />
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Payment Status</label>
+                <label className="text-sm font-medium text-gray-500">Payment Deadline</label>
                 <div className="mt-1">
-                  <PaymentBadge status={permit.payment_status} />
+                  {permit.payment_deadline ? new Date(permit.payment_deadline).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Road Fee</label>
-                <div className="mt-1 text-lg font-semibold">${permit.road_fee.toFixed(2)}</div>
+                <div className="mt-1 text-lg font-semibold">
+                  ${permit.road_fee_amount ? Number(permit.road_fee_amount).toFixed(2) : '0.00'}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">Created</label>
@@ -119,9 +131,9 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">End Date</label>
+                  <label className="text-sm font-medium text-gray-500">Estimated End Date</label>
                   <p className="mt-1 text-gray-900">
-                    {new Date(permit.end_date).toLocaleDateString()}
+                    {new Date(permit.estimated_end_date).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -174,18 +186,18 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
           </div>
 
           {/* Approval Form (if pending) */}
-          {permit.status === 'pending' && (
+          {permit.permit_status === 'pending' && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Approve/Reject Permit</h2>
-              <PermitApprovalForm permitId={permit.id} currentFee={permit.road_fee} />
+              <PermitApprovalForm permitId={permit.id} currentFee={Number(permit.road_fee_amount || 0)} />
             </div>
           )}
 
-          {/* Actions (if approved or in progress) */}
-          {['approved', 'in_progress'].includes(permit.status) && (
+          {/* Actions (if approved or on_hold) */}
+          {['approved', 'on_hold'].includes(permit.permit_status) && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold mb-4">Actions</h2>
-              <PermitActions permitId={permit.id} status={permit.status} />
+              <PermitActions permitId={permit.id} status={permit.permit_status} />
             </div>
           )}
         </div>
@@ -218,7 +230,9 @@ export default async function PermitDetailPage({ params }: { params: { id: strin
                 <div>
                   <label className="text-sm font-medium text-gray-500">Approved By</label>
                   <p className="mt-1 text-gray-900">
-                    {permit.approved_by_user?.full_name || 'Admin'}
+                    {approvedByUser
+                      ? `${approvedByUser.first_name} ${approvedByUser.last_name}`
+                      : 'Admin'}
                   </p>
                 </div>
                 <div>

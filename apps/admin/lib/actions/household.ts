@@ -145,6 +145,32 @@ export async function createHousehold(formData: FormData) {
       return { success: false, error: authError?.message || 'Failed to create user account' }
     }
 
+    // Step 3.5: Create user profile
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authUser.user.id,
+        tenant_id: tenantId,
+        email: headData.email,
+        first_name: headData.first_name,
+        last_name: headData.last_name,
+        phone_number: headData.phone_number,
+        role: 'household_head',
+        is_active: true,
+      })
+
+    if (profileError) {
+      // Rollback: delete auth user and residence unit
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      await supabase
+        .from('residence_units')
+        .delete()
+        .eq('id', residenceUnit.id)
+
+      console.error('Error creating user profile:', profileError)
+      return { success: false, error: profileError.message }
+    }
+
     // Step 4: Create household linked to residence unit
     // Generate household name from first and last name
     const householdName = `${headData.first_name} ${headData.last_name} Household`
@@ -285,6 +311,27 @@ export async function createHouseholdWithHead(formData: FormData) {
     if (authError || !authUser.user) {
       console.error('Error creating auth user:', authError)
       return { success: false, error: authError?.message || 'Failed to create user account' }
+    }
+
+    // Create user profile
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authUser.user.id,
+        tenant_id: tenantId,
+        email: headData.email,
+        first_name: headData.first_name,
+        last_name: headData.last_name,
+        phone_number: headData.phone_number,
+        role: 'household_head',
+        is_active: true,
+      })
+
+    if (profileError) {
+      // Rollback: delete auth user
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      console.error('Error creating user profile:', profileError)
+      return { success: false, error: profileError.message }
     }
 
     // Create household
