@@ -35,9 +35,9 @@ export async function createAnnouncement(input: CreateAnnouncementInput) {
         target_audience: data.target_audience,
         attachment_urls: data.attachment_urls || [],
         expires_at: data.expires_at,
-        created_by: userId,
+        published_by: userId,
         published_at: new Date().toISOString(),
-        active: true,
+        is_published: true,
       })
       .select()
       .single()
@@ -152,10 +152,10 @@ export async function deleteAnnouncement(input: DeleteAnnouncementInput) {
       return { success: false, error: 'Announcement not found' }
     }
 
-    // Soft delete by setting active to false
+    // Soft delete by setting is_published to false
     const { error: deleteError } = await supabase
       .from('announcements')
-      .update({ active: false })
+      .update({ is_published: false })
       .eq('id', data.announcement_id)
 
     if (deleteError) {

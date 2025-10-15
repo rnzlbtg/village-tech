@@ -315,7 +315,7 @@ export default async function DashboardPage() {
             </span>
           </Link>
           <Link
-            href="/announcements/new"
+            href="/announcements"
             className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Megaphone className="h-6 w-6 text-orange-600 mb-2" />

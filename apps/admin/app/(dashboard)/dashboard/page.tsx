@@ -233,7 +233,7 @@ export default async function DashboardPage() {
             <span className="text-sm font-medium text-gray-700">Add Household</span>
           </Link>
           <Link
-            href="/announcements/new"
+            href="/announcements"
             className="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-primary-light transition-colors"
           >
             <Megaphone className="h-5 w-5 text-primary" />

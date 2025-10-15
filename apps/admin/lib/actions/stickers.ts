@@ -25,7 +25,6 @@ export async function setStickerProgram(input: SetStickerProgramInput) {
     await requireAdmin()
     const supabase = await createClient()
     const tenantId = await getTenantId()
-    const userId = await getUserId()
 
     // Validate input
     const data = setStickerProgramSchema.parse(input)
@@ -114,8 +113,8 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
     }
 
     // Check if request is already processed
-    if (request.status !== 'pending') {
-      return { success: false, error: `Request is already ${request.status}` }
+    if (request.request_status !== 'pending') {
+      return { success: false, error: `Request is already ${request.request_status}` }
     }
 
     // Get active sticker program
@@ -135,7 +134,7 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
       .from('sticker_requests')
       .select('*', { count: 'exact', head: true })
       .eq('household_id', request.household_id)
-      .in('status', ['approved', 'distributed'])
+      .in('request_status', ['approved', 'distributed'])
 
     if (countError) {
       return { success: false, error: 'Failed to check allocation limit' }
@@ -153,9 +152,9 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
     const { error: updateError } = await supabase
       .from('sticker_requests')
       .update({
-        status: 'approved',
-        approved_at: new Date().toISOString(),
-        approved_by: userId,
+        request_status: 'approved',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: userId,
       })
       .eq('id', data.request_id)
 
@@ -167,8 +166,8 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
     if (request.household.household_head_id) {
       const { data: householdHead } = await supabase
         .from('user_profiles')
-        .select('full_name, email')
-        .eq('user_id', request.household.household_head_id)
+        .select('first_name, last_name, email')
+        .eq('id', request.household.household_head_id)
         .single()
 
       if (householdHead?.email) {
@@ -176,7 +175,7 @@ export async function approveStickerRequest(input: ApproveStickerRequestInput) {
           'Please visit the admin office during business hours (Mon-Fri, 9 AM - 5 PM) to collect your sticker. Bring a valid ID for verification.'
 
         const emailTemplate = stickerApprovedEmail({
-          householdHeadName: householdHead.full_name || 'Resident',
+          householdHeadName: householdHead ? `${householdHead.first_name} ${householdHead.last_name}` : 'Resident',
           vehiclePlate: request.vehicle_plate,
           pickupInstructions,
         })
@@ -233,15 +232,15 @@ export async function rejectStickerRequest(input: RejectStickerRequestInput) {
     }
 
     // Check if request is already processed
-    if (request.status !== 'pending') {
-      return { success: false, error: `Request is already ${request.status}` }
+    if (request.request_status !== 'pending') {
+      return { success: false, error: `Request is already ${request.request_status}` }
     }
 
     // Reject the request
     const { error: updateError } = await supabase
       .from('sticker_requests')
       .update({
-        status: 'rejected',
+        request_status: 'rejected',
         rejection_reason: data.rejection_reason,
       })
       .eq('id', data.request_id)
@@ -254,13 +253,13 @@ export async function rejectStickerRequest(input: RejectStickerRequestInput) {
     if (request.household.household_head_id) {
       const { data: householdHead } = await supabase
         .from('user_profiles')
-        .select('full_name, email')
-        .eq('user_id', request.household.household_head_id)
+        .select('first_name, last_name, email')
+        .eq('id', request.household.household_head_id)
         .single()
 
       if (householdHead?.email) {
         const emailTemplate = stickerRejectedEmail({
-          householdHeadName: householdHead.full_name || 'Resident',
+          householdHeadName: householdHead ? `${householdHead.first_name} ${householdHead.last_name}` : 'Resident',
           vehiclePlate: request.vehicle_plate,
           rejectionReason: data.rejection_reason,
         })
@@ -323,10 +322,10 @@ export async function distributeStickerPhysical(input: DistributeStickerInput) {
     }
 
     // Check if request is approved
-    if (request.status !== 'approved') {
+    if (request.request_status !== 'approved') {
       return {
         success: false,
-        error: `Cannot distribute sticker with status: ${request.status}`,
+        error: `Cannot distribute sticker with status: ${request.request_status}`,
       }
     }
 
@@ -347,6 +346,7 @@ export async function distributeStickerPhysical(input: DistributeStickerInput) {
       .insert({
         tenant_id: tenantId,
         household_id: request.household_id,
+        sticker_request_id: data.request_id,
         sticker_code: data.sticker_code,
         vehicle_plate: request.vehicle_plate,
         vehicle_make: request.vehicle_make,
@@ -365,9 +365,11 @@ export async function distributeStickerPhysical(input: DistributeStickerInput) {
     const { error: updateError } = await supabase
       .from('sticker_requests')
       .update({
-        status: 'distributed',
+        request_status: 'distributed',
+        sticker_code: data.sticker_code,
         distributed_at: data.distributed_at || new Date().toISOString(),
-        signature: data.signature,
+        distributed_by: await getUserId(),
+        recipient_signature_url: data.signature,
       })
       .eq('id', data.request_id)
 
@@ -383,11 +385,14 @@ export async function distributeStickerPhysical(input: DistributeStickerInput) {
     }
 
     // T055: Generate distribution receipt
-    const { data: adminProfile } = await supabase
-      .from('user_profiles')
-      .select('full_name')
-      .eq('user_id', (await getUserId()) || '')
-      .single()
+    const adminUserId = await getUserId()
+    const { data: adminProfile } = adminUserId
+      ? await supabase
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', adminUserId)
+          .single()
+      : { data: null }
 
     const { data: tenant } = await supabase.from('tenants').select('name').eq('id', tenantId).single()
 
@@ -403,7 +408,7 @@ export async function distributeStickerPhysical(input: DistributeStickerInput) {
       vehicle_color: request.vehicle_color,
       owner_name: request.owner_name,
       distributed_at: data.distributed_at || new Date().toISOString(),
-      distributed_by: adminProfile?.full_name || 'Admin',
+      distributed_by: adminProfile ? `${adminProfile.first_name} ${adminProfile.last_name}` : 'Admin',
       signature: data.signature,
       tenant_name: tenant?.name,
     }
