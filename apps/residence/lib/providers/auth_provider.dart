@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:developer' as developer;
 import '../services/supabase_service.dart';
 
 /// Authentication state
@@ -61,10 +62,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
 
       state = AuthState(user: response.user);
-    } catch (e) {
+    } on AuthException catch (e) {
+      // Handle Supabase-specific auth errors
+      developer.log('AuthException: ${e.message}', name: 'AuthProvider', error: e);
+      String errorMessage = 'Authentication failed';
+
+      if (e.message.contains('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password';
+      } else if (e.message.contains('Email not confirmed')) {
+        errorMessage = 'Please verify your email address';
+      } else if (e.message.contains('network') || e.message.contains('fetch')) {
+        errorMessage = 'Network error. Please check your connection';
+      } else {
+        errorMessage = e.message;
+      }
+
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: errorMessage,
+      );
+    } catch (e) {
+      // Handle other errors (network, etc.)
+      developer.log('Sign in error: $e', name: 'AuthProvider', error: e);
+      String errorMessage = 'An error occurred';
+
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('network') ||
+          e.toString().contains('fetch') ||
+          e.toString().contains('AuthRetryableFetch')) {
+        errorMessage = 'Network error. Please check your internet connection';
+      } else {
+        errorMessage = e.toString();
+      }
+
+      state = state.copyWith(
+        isLoading: false,
+        error: errorMessage,
       );
     }
   }

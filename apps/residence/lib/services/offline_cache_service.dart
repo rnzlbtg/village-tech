@@ -130,6 +130,24 @@ class OfflineCacheService {
 
   // ========== General Cache Operations ==========
 
+  /// Get value from cache
+  Future<dynamic> get(String key, {String box = householdBox}) async {
+    final hiveBox = Hive.box(box);
+    return hiveBox.get(key);
+  }
+
+  /// Put value in cache
+  Future<void> put(String key, dynamic value, {String box = householdBox}) async {
+    final hiveBox = Hive.box(box);
+    await hiveBox.put(key, value);
+  }
+
+  /// Delete value from cache
+  Future<void> delete(String key, {String box = householdBox}) async {
+    final hiveBox = Hive.box(box);
+    await hiveBox.delete(key);
+  }
+
   /// Clear all caches
   Future<void> clearAllCaches() async {
     await Hive.box(householdBox).clear();

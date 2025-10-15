@@ -1,5 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:developer' as developer;
 
 /// Supabase client singleton service
 /// Manages Supabase initialization and provides access to the client
@@ -65,20 +66,45 @@ class SupabaseService {
     return user.appMetadata['tenant_id'] as String?;
   }
 
-  /// Get household ID for current user
+  /// Get household ID from user metadata (synchronous)
+  String? get householdId {
+    final user = client.auth.currentUser;
+    if (user == null) return null;
+    return user.appMetadata['household_id'] as String?;
+  }
+
+  /// Get household ID for current user (async version)
   Future<String?> getHouseholdId() async {
     final userId = currentUserId;
-    if (userId == null) return null;
+    developer.log('getHouseholdId called for user: $userId', name: 'SupabaseService');
+
+    if (userId == null) {
+      developer.log('No current user ID', name: 'SupabaseService');
+      return null;
+    }
 
     try {
-      final data = await client
+      // First check if user is household head
+      developer.log('Checking if user is household head...', name: 'SupabaseService');
+      final headData = await client
           .from('households')
           .select('id')
           .eq('household_head_id', userId)
           .maybeSingle();
 
-      return data?['id'] as String?;
+      developer.log('Household head query result: $headData', name: 'SupabaseService');
+
+      if (headData != null) {
+        final householdId = headData['id'] as String?;
+        developer.log('Found household as head: $householdId', name: 'SupabaseService');
+        return householdId;
+      }
+
+      // User is not a household head
+      developer.log('User is not a household head', name: 'SupabaseService');
+      return null;
     } catch (e) {
+      developer.log('Error getting household ID: $e', name: 'SupabaseService', error: e);
       return null;
     }
   }

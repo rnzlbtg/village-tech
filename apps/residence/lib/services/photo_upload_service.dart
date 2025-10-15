@@ -40,10 +40,6 @@ class PhotoUploadService {
     await _supabase.storage.from('user-photos').upload(
           path,
           compressedFile,
-          fileOptions: const FileOptions(
-            contentType: 'image/jpeg',
-            upsert: true,
-          ),
         );
 
     // 3. Get signed URL (24-hour expiration)

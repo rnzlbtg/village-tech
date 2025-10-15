@@ -36,15 +36,15 @@
 - [X] T00 Create Supabase client singleton service in lib/services/supabase_service.dart with authentication state
 - [X] T00 Implement authentication flow with email/password in lib/providers/auth_provider.dart using Riverpod
 - [X] T00 Create offline cache service in lib/services/offline_cache_service.dart using Hive with three boxes (household_data, sticker_data, guest_data)
-- [ ] T010 Initialize Firebase Cloud Messaging in lib/services/notification_service.dart with token registration and foreground/background handlers
-- [ ] T011 Create photo upload service in lib/services/photo_upload_service.dart with flutter_image_compress and Supabase Storage integration
-- [ ] T012 Setup go_router navigation with route definitions in lib/app.dart
-- [ ] T013 [P] Create base ApiResult<T> class for error handling in lib/utils/api_result.dart
-- [ ] T014 [P] Create form validators utility in lib/utils/validators.dart (email, phone, required fields)
-- [ ] T015 [P] Create constants file in lib/utils/constants.dart with storage bucket names and cache keys
-- [ ] T016 [P] Create shared loading widget in lib/widgets/shared/loading_widget.dart
-- [ ] T017 [P] Create shared error widget in lib/widgets/shared/error_widget.dart
-- [ ] T018 Create main entry point in lib/main.dart with Supabase initialization, Hive initialization, and FCM initialization
+- [X] T010 Initialize Firebase Cloud Messaging in lib/services/notification_service.dart with token registration and foreground/background handlers
+- [X] T011 Create photo upload service in lib/services/photo_upload_service.dart with flutter_image_compress and Supabase Storage integration
+- [X] T012 Setup go_router navigation with route definitions in lib/app.dart
+- [X] T013 [P] Create base ApiResult<T> class for error handling in lib/utils/api_result.dart
+- [X] T014 [P] Create form validators utility in lib/utils/validators.dart (email, phone, required fields)
+- [X] T015 [P] Create constants file in lib/utils/constants.dart with storage bucket names and cache keys
+- [X] T016 [P] Create shared loading widget in lib/widgets/shared/loading_widget.dart
+- [X] T017 [P] Create shared error widget in lib/widgets/shared/error_widget.dart
+- [X] T018 Create main entry point in lib/main.dart with Supabase initialization, Hive initialization, and FCM initialization
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -58,16 +58,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Create HouseholdMember model in lib/models/household_member.dart with fromJson/toJson serialization
-- [ ] T020 [P] [US1] Create household service in lib/services/household_service.dart with addHouseholdMember, updateHouseholdMember, removeHouseholdMember, fetchHouseholdMembers methods
-- [ ] T021 [US1] Create household provider in lib/providers/household_provider.dart using Riverpod StateNotifier with offline cache integration
-- [ ] T022 [US1] Implement household members list screen in lib/screens/household_members/household_members_list_screen.dart with pull-to-refresh and offline indicator
-- [ ] T023 [US1] Implement add household member form in lib/screens/household_members/add_household_member_screen.dart with name, relationship dropdown, contact, email, birth date fields
-- [ ] T024 [US1] Implement edit household member form in lib/screens/household_members/edit_household_member_screen.dart reusing form widgets
-- [ ] T025 [US1] Create household member card widget in lib/widgets/household_members/household_member_card.dart with edit/delete actions
-- [ ] T026 [US1] Add validation for household member forms (required name, valid relationship)
-- [ ] T027 [US1] Implement offline caching for household members list using Hive (cache on fetch, load from cache on startup)
-- [ ] T028 [US1] Add remove household member confirmation dialog with cascade effect warning (stickers will be deactivated)
+- [X] T019 [P] [US1] Create HouseholdMember model in lib/models/household_member.dart with fromJson/toJson serialization
+- [X] T020 [P] [US1] Create household service in lib/services/household_service.dart with addHouseholdMember, updateHouseholdMember, removeHouseholdMember, fetchHouseholdMembers methods
+- [X] T021 [US1] Create household provider in lib/providers/household_provider.dart using Riverpod StateNotifier with offline cache integration
+- [X] T022 [US1] Implement household members list screen in lib/screens/household_members/household_members_list_screen.dart with pull-to-refresh and offline indicator
+- [X] T023 [US1] Implement add household member form in lib/screens/household_members/add_household_member_screen.dart with name, relationship dropdown, contact, email, birth date fields
+- [X] T024 [US1] Implement edit household member form in lib/screens/household_members/edit_household_member_screen.dart reusing form widgets
+- [X] T025 [US1] Create household member card widget in lib/widgets/household_members/household_member_card.dart with edit/delete actions
+- [X] T026 [US1] Add validation for household member forms (required name, valid relationship)
+- [X] T027 [US1] Implement offline caching for household members list using Hive (cache on fetch, load from cache on startup)
+- [X] T028 [US1] Add remove household member confirmation dialog with cascade effect warning (stickers will be deactivated)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -81,20 +81,20 @@
 
 ### Implementation for User Story 2
 
-- [ ] T029 [P] [US2] Create StickerRequest model in lib/models/sticker_request.dart with status enum (pending, approved, distributed, rejected)
-- [ ] T030 [P] [US2] Create RfidSticker model in lib/models/rfid_sticker.dart with status enum (active, expired, lost, deactivated)
-- [ ] T031 [P] [US2] Create StickerAllocation model in lib/models/sticker_allocation.dart with total, used, available fields
-- [ ] T032 [US2] Create sticker service in lib/services/sticker_service.dart with requestSticker, checkAllocation, fetchPendingRequests, assignStickerToVehicle methods
-- [ ] T033 [US2] Create sticker provider in lib/providers/sticker_provider.dart using Riverpod StateNotifier with Supabase realtime subscription for sticker_requests status changes
-- [ ] T034 [US2] Implement sticker allocation dashboard screen in lib/screens/stickers/sticker_allocation_screen.dart showing total/used/available with circular progress indicator
-- [ ] T035 [US2] Implement request sticker form in lib/screens/stickers/request_sticker_screen.dart with owner selection (household member or beneficial user), vehicle plate, make, color fields
-- [ ] T036 [US2] Implement pending sticker requests list in lib/screens/stickers/pending_requests_screen.dart with status badges and approval timestamps
-- [ ] T037 [US2] Implement sticker details screen in lib/screens/stickers/sticker_details_screen.dart showing request details, approval status, pickup instructions
-- [ ] T038 [US2] Create sticker card widget in lib/widgets/stickers/sticker_card.dart with status badge and vehicle info
-- [ ] T039 [US2] Add validation for sticker requests (check allocation before submission, prevent duplicate requests for same vehicle)
-- [ ] T040 [US2] Implement offline caching for sticker allocation using Hive (cache allocation counts, display last cached timestamp)
-- [ ] T041 [US2] Add push notification handler for sticker approval notifications (navigate to sticker details on tap)
-- [ ] T042 [US2] Implement allocation limit exceeded error UI with clear messaging and suggestion to contact admin
+- [X] T029 [P] [US2] Create StickerRequest model in lib/models/sticker_request.dart with status enum (pending, approved, distributed, rejected)
+- [X] T030 [P] [US2] Create RfidSticker model in lib/models/rfid_sticker.dart with status enum (active, expired, lost, deactivated)
+- [X] T031 [P] [US2] Create StickerAllocation model in lib/models/sticker_allocation.dart with total, used, available fields
+- [X] T032 [US2] Create sticker service in lib/services/sticker_service.dart with requestSticker, checkAllocation, fetchPendingRequests, assignStickerToVehicle methods
+- [X] T033 [US2] Create sticker provider in lib/providers/sticker_provider.dart using Riverpod StateNotifier with Supabase realtime subscription for sticker_requests status changes
+- [X] T034 [US2] Implement sticker allocation dashboard screen in lib/screens/stickers/sticker_allocation_screen.dart showing total/used/available with circular progress indicator
+- [X] T035 [US2] Implement request sticker form in lib/screens/stickers/request_sticker_screen.dart with owner selection (household member or beneficial user), vehicle plate, make, color fields
+- [X] T036 [US2] Implement pending sticker requests list in lib/screens/stickers/pending_requests_screen.dart with status badges and approval timestamps
+- [X] T037 [US2] Implement sticker details screen in lib/screens/stickers/sticker_details_screen.dart showing request details, approval status, pickup instructions
+- [X] T038 [US2] Create sticker card widget in lib/widgets/stickers/sticker_card.dart with status badge and vehicle info
+- [X] T039 [US2] Add validation for sticker requests (check allocation before submission, prevent duplicate requests for same vehicle)
+- [X] T040 [US2] Implement offline caching for sticker allocation using Hive (cache allocation counts, display last cached timestamp)
+- [X] T041 [US2] Add push notification handler for sticker approval notifications (navigate to sticker details on tap)
+- [X] T042 [US2] Implement allocation limit exceeded error UI with clear messaging and suggestion to contact admin
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -108,19 +108,19 @@
 
 ### Implementation for User Story 3
 
-- [ ] T043 [P] [US3] Create BeneficialUser model in lib/models/beneficial_user.dart with status enum (active, inactive)
-- [ ] T044 [US3] Create beneficial user service in lib/services/beneficial_user_service.dart with addBeneficialUser, updateBeneficialUser, removeBeneficialUser, uploadPhoto methods
-- [ ] T045 [US3] Create beneficial user provider in lib/providers/beneficial_user_provider.dart using Riverpod StateNotifier
-- [ ] T046 [US3] Implement beneficial users list screen in lib/screens/beneficial_users/beneficial_users_list_screen.dart with status filter (active/inactive)
-- [ ] T047 [US3] Implement add beneficial user form in lib/screens/beneficial_users/add_beneficial_user_screen.dart with name, contact, email, relationship dropdown, photo capture/upload
-- [ ] T048 [US3] Implement edit beneficial user form in lib/screens/beneficial_users/edit_beneficial_user_screen.dart with photo update capability
-- [ ] T049 [US3] Create beneficial user card widget in lib/widgets/beneficial_users/beneficial_user_card.dart with photo thumbnail and edit/delete actions
-- [ ] T050 [US3] Implement photo capture widget in lib/widgets/forms/photo_capture_widget.dart with camera and gallery options using image_picker
-- [ ] T051 [US3] Integrate flutter_image_compress in photo upload service (compress to max 1MB, 1920x1080 resolution, quality 85)
-- [ ] T052 [US3] Implement photo upload progress indicator with retry on failure
-- [ ] T053 [US3] Add validation for beneficial user forms (required name, contact, relationship, photo upload optional but recommended)
-- [ ] T054 [US3] Implement remove beneficial user with cascade confirmation (associated stickers will be deactivated)
-- [ ] T055 [US3] Display beneficial user stickers in their detail view with sticker status and vehicle info
+- [X] T043 [P] [US3] Create BeneficialUser model in lib/models/beneficial_user.dart with status enum (active, inactive)
+- [X] T044 [US3] Create beneficial user service in lib/services/beneficial_user_service.dart with addBeneficialUser, updateBeneficialUser, removeBeneficialUser, uploadPhoto methods
+- [X] T045 [US3] Create beneficial user provider in lib/providers/beneficial_user_provider.dart using Riverpod StateNotifier
+- [X] T046 [US3] Implement beneficial users list screen in lib/screens/beneficial_users/beneficial_users_list_screen.dart with status filter (active/inactive)
+- [X] T047 [US3] Implement add beneficial user form in lib/screens/beneficial_users/add_beneficial_user_screen.dart with name, contact, email, relationship dropdown, photo capture/upload
+- [X] T048 [US3] Implement edit beneficial user form in lib/screens/beneficial_users/edit_beneficial_user_screen.dart with photo update capability
+- [X] T049 [US3] Create beneficial user card widget in lib/widgets/beneficial_users/beneficial_user_card.dart with photo thumbnail and edit/delete actions
+- [X] T050 [US3] Implement photo capture widget in lib/widgets/beneficial_users/photo_capture_widget.dart with camera and gallery options using image_picker
+- [X] T051 [US3] Integrate flutter_image_compress in photo upload service (compress to max 1MB, 1920x1080 resolution, quality 85)
+- [X] T052 [US3] Implement photo upload progress indicator with retry on failure
+- [X] T053 [US3] Add validation for beneficial user forms (required name, contact, relationship, photo upload optional but recommended)
+- [X] T054 [US3] Implement remove beneficial user with cascade confirmation (associated stickers will be deactivated)
+- [X] T055 [US3] Display beneficial user stickers in their detail view with sticker status and vehicle info
 
 **Checkpoint**: All P1-P2 user stories should now be independently functional
 
@@ -134,18 +134,18 @@
 
 ### Implementation for User Story 4
 
-- [ ] T056 [P] [US4] Create Guest model in lib/models/guest.dart with visitType enum (day_trip, multi_day) and status enum (scheduled, checked_in, checked_out, cancelled)
-- [ ] T057 [US4] Create guest service in lib/services/guest_service.dart with scheduleGuest, updateGuestSchedule, cancelGuestVisit, fetchScheduledGuests methods
-- [ ] T058 [US4] Create guest provider in lib/providers/guest_provider.dart using Riverpod StateNotifier with auto-refresh for active guests
-- [ ] T059 [US4] Implement scheduled guests list screen in lib/screens/guests/scheduled_guests_screen.dart with upcoming/active/past tabs
-- [ ] T060 [US4] Implement schedule guest form in lib/screens/guests/schedule_guest_screen.dart with guest name, contact, visit start/end datetime pickers, visit type radio buttons, purpose, vehicle plate
-- [ ] T061 [US4] Implement edit guest schedule form in lib/screens/guests/edit_guest_screen.dart with date/time updates
-- [ ] T062 [US4] Implement guest details screen in lib/screens/guests/guest_details_screen.dart showing check-in/check-out status and visit duration
-- [ ] T063 [US4] Create guest card widget in lib/widgets/guests/guest_card.dart with visit countdown timer for upcoming visits
-- [ ] T064 [US4] Add validation for guest scheduling (visit_start < visit_end, start time not in past, max 30 days duration for multi_day)
-- [ ] T065 [US4] Implement offline caching for scheduled guests using Hive (cache upcoming guests, sync when online)
-- [ ] T066 [US4] Add push notification handler for guest verification requests from gate guards (navigate to guest approval screen)
-- [ ] T067 [US4] Implement guest approval/denial screen for unregistered guests arriving at gate (quick approve/deny with reason)
+- [X] T056 [P] [US4] Create Guest model in lib/models/guest.dart with visitType enum (day_trip, multi_day) and status enum (scheduled, checked_in, checked_out, cancelled)
+- [X] T057 [US4] Create guest service in lib/services/guest_service.dart with scheduleGuest, updateGuestSchedule, cancelGuestVisit, fetchScheduledGuests methods
+- [X] T058 [US4] Create guest provider in lib/providers/guest_provider.dart using Riverpod StateNotifier with auto-refresh for active guests
+- [X] T059 [US4] Implement scheduled guests list screen in lib/screens/guests/scheduled_guests_screen.dart with upcoming/active/past tabs
+- [X] T060 [US4] Implement schedule guest form in lib/screens/guests/schedule_guest_screen.dart with guest name, contact, visit start/end datetime pickers, visit type radio buttons, purpose, vehicle plate
+- [X] T061 [US4] Implement edit guest schedule form in lib/screens/guests/edit_guest_screen.dart with date/time updates
+- [X] T062 [US4] Implement guest details screen in lib/screens/guests/guest_details_screen.dart showing check-in/check-out status and visit duration
+- [X] T063 [US4] Create guest card widget in lib/widgets/guests/guest_card.dart with visit countdown timer for upcoming visits
+- [X] T064 [US4] Add validation for guest scheduling (visit_start < visit_end, start time not in past, max 30 days duration for multi_day)
+- [X] T065 [US4] Implement offline caching for scheduled guests using Hive (cache upcoming guests, sync when online)
+- [X] T066 [US4] Add push notification handler for guest verification requests from gate guards (navigate to guest approval screen)
+- [X] T067 [US4] Implement guest approval/denial screen for unregistered guests arriving at gate (quick approve/deny with reason)
 
 **Checkpoint**: All P1-P2 user stories should work together seamlessly
 
@@ -159,17 +159,17 @@
 
 ### Implementation for User Story 5
 
-- [ ] T068 [P] [US5] Create ConstructionPermitRequest model in lib/models/construction_permit_request.dart with status enum (pending, fee_pending, approved, rejected, completed)
-- [ ] T069 [P] [US5] Create PaymentLog model in lib/models/payment_log.dart with payment status and receipt info
-- [ ] T070 [US5] Create permit service in lib/services/permit_service.dart with submitConstructionPermit, cancelPermitRequest, fetchPermitRequests methods
-- [ ] T071 [US5] Create permit provider in lib/providers/permit_provider.dart using Riverpod StateNotifier
-- [ ] T072 [US5] Implement construction permits list screen in lib/screens/permits/permits_list_screen.dart with status filter (pending, approved, completed)
-- [ ] T073 [US5] Implement submit permit request form in lib/screens/permits/submit_permit_screen.dart with project type dropdown, description textarea, contractor name/contact, start/end date pickers, estimated workers number input
-- [ ] T074 [US5] Implement permit details screen in lib/screens/permits/permit_details_screen.dart showing fee computation, payment status, approval status, permit reference
-- [ ] T075 [US5] Create permit card widget in lib/widgets/permits/permit_card.dart with status badge and project timeline
-- [ ] T076 [US5] Add validation for permit requests (start_date < end_date, start date not in past, estimated_workers > 0, max 365 days duration)
-- [ ] T077 [US5] Add push notification handler for fee computation and permit approval notifications
-- [ ] T078 [US5] Implement payment instructions screen showing fee amount and payment methods (placeholder for future payment integration)
+- [X] T068 [P] [US5] Create ConstructionPermitRequest model in lib/models/construction_permit_request.dart with status enum (pending, fee_pending, approved, rejected, completed)
+- [X] T069 [P] [US5] Create PaymentLog model in lib/models/payment_log.dart with payment status and receipt info
+- [X] T070 [US5] Create permit service in lib/services/permit_service.dart with submitConstructionPermit, cancelPermitRequest, fetchPermitRequests methods
+- [X] T071 [US5] Create permit provider in lib/providers/permit_provider.dart using Riverpod StateNotifier
+- [X] T072 [US5] Implement construction permits list screen in lib/screens/permits/permits_list_screen.dart with status filter (pending, approved, completed)
+- [X] T073 [US5] Implement submit permit request form in lib/screens/permits/submit_permit_screen.dart with project type dropdown, description textarea, contractor name/contact, start/end date pickers, estimated workers number input
+- [X] T074 [US5] Implement permit details screen in lib/screens/permits/permit_details_screen.dart showing fee computation, payment status, approval status, permit reference
+- [X] T075 [US5] Create permit card widget in lib/widgets/permits/permit_card.dart with status badge and project timeline
+- [X] T076 [US5] Add validation for permit requests (start_date < end_date, start date not in past, estimated_workers > 0, max 365 days duration)
+- [X] T077 [US5] Add push notification handler for fee computation and permit approval notifications
+- [X] T078 [US5] Implement payment instructions screen showing fee amount and payment methods (placeholder for future payment integration)
 
 **Checkpoint**: All user stories P1-P3 should be independently functional
 
@@ -183,23 +183,23 @@
 
 ### Implementation for User Story 6
 
-- [ ] T079 [P] [US6] Create Message model in lib/models/message.dart with messageType enum (household_to_admin, admin_to_household)
-- [ ] T080 [P] [US6] Create Announcement model in lib/models/announcement.dart with priority enum (normal, high, urgent)
-- [ ] T081 [P] [US6] Create VillageRule model in lib/models/village_rule.dart with ruleCategory enum (general, parking, noise, construction, curfew)
-- [ ] T082 [US6] Create messaging service in lib/services/messaging_service.dart with sendMessageToAdmin, fetchMessages methods
-- [ ] T083 [US6] Create announcement service in lib/services/announcement_service.dart with fetchAnnouncements method and Supabase realtime subscription
-- [ ] T084 [US6] Create village rules service in lib/services/village_rules_service.dart with fetchVillageRules method
-- [ ] T085 [US6] Create messaging provider in lib/providers/messaging_provider.dart using Riverpod StateNotifier
-- [ ] T086 [US6] Create announcement provider in lib/providers/announcement_provider.dart with realtime updates
-- [ ] T087 [US6] Implement messages list screen in lib/screens/messages/messages_list_screen.dart with sent/received tabs and unread badge
-- [ ] T088 [US6] Implement compose message screen in lib/screens/messages/compose_message_screen.dart with subject, content fields
-- [ ] T089 [US6] Implement announcements feed screen in lib/screens/announcements/announcements_screen.dart with priority badges and attachments
-- [ ] T090 [US6] Implement announcement details screen in lib/screens/announcements/announcement_details_screen.dart with full content and attachment downloads
-- [ ] T091 [US6] Implement village rules screen in lib/screens/village_rules/village_rules_screen.dart with category tabs and curfew time display
-- [ ] T092 [US6] Create announcement card widget in lib/widgets/announcements/announcement_card.dart with priority badge and timestamp
-- [ ] T093 [US6] Create message card widget in lib/widgets/messages/message_card.dart with read/unread indicator
-- [ ] T094 [US6] Add push notification handler for high-priority announcements (navigate to announcement details on tap)
-- [ ] T095 [US6] Add validation for message composition (required content, max 1000 characters)
+- [X] T079 [P] [US6] Create Message model in lib/models/message.dart with messageType enum (household_to_admin, admin_to_household)
+- [X] T080 [P] [US6] Create Announcement model in lib/models/announcement.dart with priority enum (normal, high, urgent)
+- [X] T081 [P] [US6] Create VillageRule model in lib/models/village_rule.dart with ruleCategory enum (general, parking, noise, construction, curfew)
+- [X] T082 [US6] Create messaging service in lib/services/messaging_service.dart with sendMessageToAdmin, fetchMessages methods
+- [X] T083 [US6] Create announcement service in lib/services/announcement_service.dart with fetchAnnouncements method and Supabase realtime subscription
+- [X] T084 [US6] Create village rules service in lib/services/village_rules_service.dart with fetchVillageRules method
+- [X] T085 [US6] Create messaging provider in lib/providers/messaging_provider.dart using Riverpod StateNotifier
+- [X] T086 [US6] Create announcement provider in lib/providers/announcement_provider.dart with realtime updates
+- [X] T087 [US6] Implement messages list screen in lib/screens/messages/messages_list_screen.dart with sent/received tabs and unread badge
+- [X] T088 [US6] Implement compose message screen in lib/screens/messages/compose_message_screen.dart with subject, content fields
+- [X] T089 [US6] Implement announcements feed screen in lib/screens/announcements/announcements_screen.dart with priority badges and attachments
+- [X] T090 [US6] Implement announcement details screen in lib/screens/announcements/announcement_details_screen.dart with full content and attachment downloads
+- [X] T091 [US6] Implement village rules screen in lib/screens/village_rules/village_rules_screen.dart with category tabs and curfew time display
+- [X] T092 [US6] Create announcement card widget in lib/widgets/announcements/announcement_card.dart with priority badge and timestamp
+- [X] T093 [US6] Create message card widget in lib/widgets/messages/message_card.dart with read/unread indicator
+- [X] T094 [US6] Add push notification handler for high-priority announcements (navigate to announcement details on tap)
+- [X] T095 [US6] Add validation for message composition (required content, max 1000 characters)
 
 **Checkpoint**: All user stories should now be independently functional and integrated
 
@@ -209,11 +209,11 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T096 [P] Implement home dashboard screen in lib/screens/home/home_screen.dart with quick access cards to all features (household, stickers, beneficial users, guests, permits, announcements)
-- [ ] T097 [P] Implement settings screen in lib/screens/settings/settings_screen.dart with profile view, notification preferences, logout
-- [ ] T098 [P] Create app navigation drawer in lib/widgets/shared/app_drawer.dart with menu items for all main screens
-- [ ] T099 Add empty state widgets for all list screens (household members, beneficial users, guests, stickers, permits, messages, announcements)
-- [ ] T100 Add pull-to-refresh capability to all list screens with offline sync indicator
+- [X] T096 [P] Implement home dashboard screen in lib/screens/home/home_screen.dart with quick access cards to all features (household, stickers, beneficial users, guests, permits, announcements)
+- [X] T097 [P] Implement settings screen in lib/screens/settings/settings_screen.dart with profile view, notification preferences, logout
+- [X] T098 [P] Create app navigation drawer in lib/widgets/shared/app_drawer.dart with menu items for all main screens
+- [X] T099 Add empty state widgets for all list screens (household members, beneficial users, guests, stickers, permits, messages, announcements)
+- [X] T100 Add pull-to-refresh capability to all list screens with offline sync indicator
 - [ ] T101 Implement search functionality for household members and beneficial users lists
 - [ ] T102 Implement date range filters for guests (upcoming, today, this week, this month)
 - [ ] T103 Add export/download capability for guest logs and sticker history (CSV format)

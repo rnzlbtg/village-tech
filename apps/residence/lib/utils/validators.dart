@@ -1,50 +1,56 @@
 /// Form validation utilities
 class Validators {
   /// Email validator
-  static String? email(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
+  static String? Function(String?) email() {
+    return (value) {
+      if (value == null || value.isEmpty) {
+        return 'Email is required';
+      }
 
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
+      final emailRegex = RegExp(
+        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      );
 
-    if (!emailRegex.hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
+      if (!emailRegex.hasMatch(value)) {
+        return 'Please enter a valid email';
+      }
 
-    return null;
+      return null;
+    };
   }
 
   /// Phone number validator (Philippine format)
-  static String? phone(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Phone number is required';
-    }
+  static String? Function(String?) phone() {
+    return (value) {
+      if (value == null || value.isEmpty) {
+        return 'Phone number is required';
+      }
 
-    // Remove spaces, dashes, and parentheses
-    final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+      // Remove spaces, dashes, and parentheses
+      final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
 
-    // Check if it's a valid Philippine mobile number
-    // Formats: 09XXXXXXXXX, +639XXXXXXXXX, 639XXXXXXXXX
-    final phoneRegex = RegExp(
-      r'^(\+?63|0)?9\d{9}$',
-    );
+      // Check if it's a valid Philippine mobile number
+      // Formats: 09XXXXXXXXX, +639XXXXXXXXX, 639XXXXXXXXX
+      final phoneRegex = RegExp(
+        r'^(\+?63|0)?9\d{9}$',
+      );
 
-    if (!phoneRegex.hasMatch(cleaned)) {
-      return 'Please enter a valid Philippine mobile number';
-    }
+      if (!phoneRegex.hasMatch(cleaned)) {
+        return 'Please enter a valid Philippine mobile number';
+      }
 
-    return null;
+      return null;
+    };
   }
 
   /// Required field validator
-  static String? required(String? value, {String? fieldName}) {
-    if (value == null || value.trim().isEmpty) {
-      return '${fieldName ?? 'This field'} is required';
-    }
-    return null;
+  static String? Function(String?) required(String message) {
+    return (value) {
+      if (value == null || value.trim().isEmpty) {
+        return message;
+      }
+      return null;
+    };
   }
 
   /// Min length validator
@@ -162,7 +168,7 @@ class Validators {
   }
 
   /// Combine multiple validators
-  static String? Function(String?) combine(
+  static String? Function(String?) compose(
     List<String? Function(String?)> validators,
   ) {
     return (value) {

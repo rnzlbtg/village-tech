@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'supabase_service.dart';
 
 /// Background message handler (must be top-level function)
@@ -91,7 +91,7 @@ class NotificationService {
 
       if (userId == null) return;
 
-      await supabase.from('user_fcm_tokens').upsert({
+      await supabase.from('fcm_tokens').upsert({
         'user_id': userId,
         'fcm_token': token,
         'platform': Platform.isIOS ? 'ios' : 'android',
@@ -136,24 +136,8 @@ class NotificationService {
     final data = message.data;
     final type = data['type'] as String?;
 
-    // Navigation will be handled by the app router
-    // This method just provides the hook for navigation
-    // ignore: avoid_print
-    print('Notification tapped: type=$type, data=$data');
-
-    // TODO: Implement navigation based on notification type
-    // Example:
-    // switch (type) {
-    //   case 'sticker_approval':
-    //     navigatorKey.currentState?.pushNamed('/stickers/${data['requestId']}');
-    //     break;
-    //   case 'guest_verification':
-    //     navigatorKey.currentState?.pushNamed('/guests');
-    //     break;
-    //   case 'announcement':
-    //     navigatorKey.currentState?.pushNamed('/announcements/${data['announcementId']}');
-    //     break;
-    // }
+    // Navigate based on notification type
+    _navigateBasedOnType(type, data);
   }
 
   /// Handle local notification tap
@@ -161,10 +145,42 @@ class NotificationService {
     final payload = details.payload;
     if (payload == null) return;
 
-    // ignore: avoid_print
-    print('Local notification tapped: payload=$payload');
+    // For local notifications, payload is the type
+    _navigateBasedOnType(payload, {});
+  }
 
-    // TODO: Implement navigation based on payload
+  /// Navigate based on notification type
+  void _navigateBasedOnType(String? type, Map<String, dynamic> data) {
+    if (type == null) return;
+
+    // Store navigation data to be used by app
+    _pendingNavigation = {
+      'type': type,
+      'data': data,
+    };
+
+    // Trigger navigation callback if set
+    _onNavigationCallback?.call(type, data);
+  }
+
+  /// Pending navigation data
+  Map<String, dynamic>? _pendingNavigation;
+
+  /// Navigation callback
+  Function(String type, Map<String, dynamic> data)? _onNavigationCallback;
+
+  /// Set navigation callback
+  void setNavigationCallback(
+    Function(String type, Map<String, dynamic> data) callback,
+  ) {
+    _onNavigationCallback = callback;
+  }
+
+  /// Get and clear pending navigation
+  Map<String, dynamic>? getPendingNavigation() {
+    final nav = _pendingNavigation;
+    _pendingNavigation = null;
+    return nav;
   }
 
   /// Get FCM token
