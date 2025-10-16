@@ -84,7 +84,8 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     // Get permit with household info
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(
           id,
@@ -92,7 +93,8 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
           tenant_id,
           household_head_id
         )
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -106,11 +108,21 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
       return { success: false, error: `Permit is already ${permit.permit_status}` }
     }
 
-    // Validate payment if required
-    if (permit.road_fee_amount > 0 && permit.payment_deadline) {
-      return {
-        success: false,
-        error: 'Payment must be completed before approval',
+    // Validate payment if required - check if payment has been completed
+    if (permit.road_fee_amount > 0) {
+      // Check if there's a payment record for this permit
+      const { data: paymentRecord, error: paymentError } = await supabase
+        .from('payment_logs')
+        .select('*')
+        .eq('permit_request_id', data.permit_id)
+        .eq('payment_status', 'completed')
+        .maybeSingle()
+
+      if (paymentError || !paymentRecord) {
+        return {
+          success: false,
+          error: 'Payment must be completed before approval',
+        }
       }
     }
 
@@ -142,7 +154,9 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
           : []
 
         const emailTemplate = constructionPermitApprovedEmail({
-          householdHeadName: householdHead ? `${householdHead.first_name} ${householdHead.last_name}` : 'Resident',
+          householdHeadName: householdHead
+            ? `${householdHead.first_name} ${householdHead.last_name}`
+            : 'Resident',
           permitReference: permit.permit_reference,
           projectDescription: permit.project_description,
           startDate: new Date(permit.start_date).toLocaleDateString(),
@@ -160,7 +174,7 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     }
 
     // T068: Send notification to guard house (logged for MVP)
-    console.log('📋 Guard House Notification:', {
+    console.log('Guard House Notification:', {
       permit_reference: permit.permit_reference,
       household: permit.household.household_name,
       authorized_workers: permit.authorized_workers,
@@ -197,10 +211,12 @@ export async function rejectConstructionPermit(input: RejectConstructionPermitIn
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id, household_head_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -262,10 +278,12 @@ export async function markPermitComplete(input: MarkPermitCompleteInput) {
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -330,10 +348,12 @@ export async function holdPermit(input: HoldPermitInput) {
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id, household_head_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -387,10 +407,12 @@ export async function unholdPermit(input: { permit_id: string }) {
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id)
-      `)
+      `
+      )
       .eq('id', input.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -439,4 +461,3 @@ export async function unholdPermit(input: { permit_id: string }) {
     }
   }
 }
-

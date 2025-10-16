@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { CreateAnnouncementModal } from '@/components/announcements/CreateAnnouncementModal'
+import { AnnouncementDetailsModal } from '@/components/announcements/AnnouncementDetailsModal'
 
 interface Announcement {
   id: string
@@ -27,6 +28,7 @@ type AnnouncementPriority = 'normal' | 'high' | 'urgent'
 
 export function AnnouncementsPageClient({ announcements, searchParams }: AnnouncementsPageClientProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null)
 
   const priorityCounts = {
     all: announcements?.length || 0,
@@ -133,12 +135,12 @@ export function AnnouncementsPageClient({ announcements, searchParams }: Announc
                     <span className="text-xs text-gray-500">
                       By Admin
                     </span>
-                    <Link
-                      href={`/announcements/${announcement.id}`}
+                    <button
+                      onClick={() => setSelectedAnnouncement(announcement)}
                       className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                     >
                       View Details →
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -157,6 +159,13 @@ export function AnnouncementsPageClient({ announcements, searchParams }: Announc
       <CreateAnnouncementModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+      />
+
+      {/* Announcement Details Modal */}
+      <AnnouncementDetailsModal
+        announcement={selectedAnnouncement}
+        isOpen={!!selectedAnnouncement}
+        onClose={() => setSelectedAnnouncement(null)}
       />
     </>
   )

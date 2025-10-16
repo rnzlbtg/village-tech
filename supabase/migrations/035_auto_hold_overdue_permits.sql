@@ -19,8 +19,8 @@ BEGIN
   WHERE
     permit_status IN ('pending', 'approved')
     AND payment_deadline < CURRENT_DATE
-    AND total_fee_amount > COALESCE((
-      SELECT SUM(amount_paid)
+    AND road_fee_amount > COALESCE((
+      SELECT SUM(payment_amount)
       FROM permit_payments
       WHERE permit_payments.permit_id = construction_permits.id
     ), 0);
@@ -45,8 +45,8 @@ BEGIN
 
     -- Check if deadline has already passed and payment is incomplete
     IF NEW.payment_deadline < CURRENT_DATE AND
-       NEW.total_fee_amount > COALESCE((
-         SELECT SUM(amount_paid)
+       NEW.road_fee_amount > COALESCE((
+         SELECT SUM(payment_amount)
          FROM permit_payments
          WHERE permit_payments.permit_id = NEW.id
        ), 0) THEN
