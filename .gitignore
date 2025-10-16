@@ -213,9 +213,20 @@ temp/
 **/android/app/google-services.json
 **/ios/Runner/GoogleService-Info.plist
 
+# Dart/Flutter dependency lock files (should be generated locally)
+**/pubspec.lock
+**/.dart_tool/
+**/build/
+**/packages/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+
 # Sentry
 .sentryclirc
 
 # Backup files
 *.backup
 *.bak
+
+# Firebase config
+android/app/google-services.json

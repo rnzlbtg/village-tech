@@ -225,20 +225,63 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, properties
           </div>
         )}
 
-        {/* Properties Tab */}
+        {/* Properties Tab - Read Only */}
         {activeTab === 'properties' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold text-gray-800">Properties</h2>
-              <button
-                onClick={() => openPropertyModal()}
-                className="bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Property
-              </button>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">Properties Overview</h2>
+              <p className="text-sm text-gray-500">
+                Property management is handled in the Admin Portal by tenant administrators.
+              </p>
             </div>
-            <PropertyList properties={properties} tenantId={tenantId} />
+            {properties.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Property Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Units
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {properties.map((property: any) => (
+                      <tr key={property.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{property.name}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">{property.address || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-700 capitalize">{property.property_type || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="text-sm text-gray-700">{property.residence_units?.[0]?.count || 0}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 border rounded-lg">
+                <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No properties yet</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Tenant administrators will create properties through the Admin Portal.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

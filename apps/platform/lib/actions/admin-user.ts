@@ -34,6 +34,11 @@ export async function createAdminUser(formData: FormData) {
     }
 
     // Create auth user using admin client
+    console.log('About to call adminClient.auth.admin.createUser')
+    console.log('adminClient instance:', !!adminClient)
+    console.log('adminClient.auth:', !!adminClient.auth)
+    console.log('adminClient.auth.admin:', !!adminClient.auth.admin)
+
     const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -45,6 +50,8 @@ export async function createAdminUser(formData: FormData) {
         tenant_id: data.tenant_id,
       },
     })
+
+    console.log('createUser response:', { authUser: !!authUser, authError })
 
     if (authError || !authUser.user) {
       console.error('Error creating auth user:', authError)

@@ -8,6 +8,7 @@
 CREATE OR REPLACE FUNCTION custom_access_token_hook(event JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
+SECURITY DEFINER
 STABLE
 AS $$
 DECLARE
@@ -20,7 +21,7 @@ BEGIN
   -- Fetch active role for the user
   SELECT role, tenant_id
   INTO user_role
-  FROM user_roles
+  FROM public.user_roles
   WHERE user_id = (event->>'user_id')::UUID
     AND is_active = true
   LIMIT 1;
@@ -46,8 +47,9 @@ END;
 $$;
 
 -- Grant necessary permissions
-GRANT EXECUTE ON FUNCTION custom_access_token_hook TO supabase_auth_admin;
-GRANT SELECT ON user_roles TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION public.custom_access_token_hook TO supabase_auth_admin;
+GRANT SELECT ON public.user_roles TO supabase_auth_admin;
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
 
 -- Comments
 COMMENT ON FUNCTION custom_access_token_hook IS 'Custom Access Token Hook: Injects user role and tenant_id into JWT claims for RLS enforcement';
