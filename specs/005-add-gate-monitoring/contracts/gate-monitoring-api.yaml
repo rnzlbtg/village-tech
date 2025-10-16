@@ -1,0 +1,1343 @@
+openapi: 3.0.3
+info:
+  title: Gate Monitoring API
+  description: API for real-time gate monitoring, access control, and security management in residential communities
+  version: 1.0.0
+  contact:
+    name: Village Tech Support
+    email: support@villagetech.com
+
+servers:
+  - url: https://api.villagetech.com/v1
+    description: Production server
+  - url: https://staging-api.villagetech.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Gates
+    description: Gate management and monitoring
+  - name: Access Control
+    description: Access permissions and validation
+  - name: Visitors
+    description: Visitor access management
+  - name: Logs
+    description: Access logs and history
+  - name: Alerts
+    description: Security alerts management
+  - name: Real-time
+    description: WebSocket events and real-time data
+
+paths:
+  /gates:
+    get:
+      tags:
+        - Gates
+      summary: List all gates
+      description: Retrieve all gates for the current tenant with current status
+      operationId: listGates
+      parameters:
+        - name: status
+          in: query
+          description: Filter by gate status
+          schema:
+            type: string
+            enum: [active, maintenance, offline, error]
+        - name: gate_type
+          in: query
+          description: Filter by gate type
+          schema:
+            type: string
+            enum: [main, pedestrian, service, emergency]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Gate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Gates
+      summary: Create new gate
+      description: Add a new gate to the system
+      operationId: createGate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGateRequest'
+      responses:
+        '201':
+          description: Gate created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /gates/{gateId}:
+    get:
+      tags:
+        - Gates
+      summary: Get gate details
+      description: Retrieve detailed information about a specific gate
+      operationId: getGate
+      parameters:
+        - name: gateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Gate details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    put:
+      tags:
+        - Gates
+      summary: Update gate
+      description: Update gate configuration and settings
+      operationId: updateGate
+      parameters:
+        - name: gateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGateRequest'
+      responses:
+        '200':
+          description: Gate updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /gates/{gateId}/status:
+    get:
+      tags:
+        - Gates
+      summary: Get gate status
+      description: Get current real-time status of a gate
+      operationId: getGateStatus
+      parameters:
+        - name: gateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Gate status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /access/validate:
+    post:
+      tags:
+        - Access Control
+      summary: Validate access request
+      description: Validate and process an access request for a gate
+      operationId: validateAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessValidationRequest'
+      responses:
+        '200':
+          description: Access validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessValidationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /access/permissions:
+    get:
+      tags:
+        - Access Control
+      summary: List access permissions
+      description: Retrieve access permissions for users and households
+      operationId: listAccessPermissions
+      parameters:
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+            format: uuid
+        - name: household_id
+          in: query
+          description: Filter by household ID
+          schema:
+            type: string
+            format: uuid
+        - name: gate_id
+          in: query
+          description: Filter by gate ID
+          schema:
+            type: string
+            format: uuid
+        - name: is_active
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Access permissions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccessPermission'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Access Control
+      summary: Create access permission
+      description: Grant access permissions to a user or household
+      operationId: createAccessPermission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccessPermissionRequest'
+      responses:
+        '201':
+          description: Access permission created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessPermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /access/permissions/{permissionId}:
+    put:
+      tags:
+        - Access Control
+      summary: Update access permission
+      description: Modify existing access permissions
+      operationId: updateAccessPermission
+      parameters:
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccessPermissionRequest'
+      responses:
+        '200':
+          description: Access permission updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessPermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    delete:
+      tags:
+        - Access Control
+      summary: Revoke access permission
+      description: Remove access permissions
+      operationId: revokeAccessPermission
+      parameters:
+        - name: permissionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Access permission revoked
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /visitors/requests:
+    get:
+      tags:
+        - Visitors
+      summary: List visitor requests
+      description: Retrieve visitor access requests with filtering options
+      operationId: listVisitorRequests
+      parameters:
+        - name: status
+          in: query
+          description: Filter by request status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, expired, checked_in, checked_out]
+        - name: household_id
+          in: query
+          description: Filter by household ID
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          description: Filter by expected arrival date from
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          description: Filter by expected arrival date to
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Visitor requests retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/VisitorRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Visitors
+      summary: Create visitor request
+      description: Submit a new visitor access request
+      operationId: createVisitorRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVisitorRequest'
+      responses:
+        '201':
+          description: Visitor request created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitorRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /visitors/requests/{requestId}:
+    get:
+      tags:
+        - Visitors
+      summary: Get visitor request details
+      description: Retrieve detailed information about a visitor request
+      operationId: getVisitorRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Visitor request details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitorRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /visitors/requests/{requestId}/approve:
+    post:
+      tags:
+        - Visitors
+      summary: Approve visitor request
+      description: Approve a visitor access request and generate access credentials
+      operationId: approveVisitorRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Visitor request approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitorRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /visitors/requests/{requestId}/reject:
+    post:
+      tags:
+        - Visitors
+      summary: Reject visitor request
+      description: Reject a visitor access request
+      operationId: rejectVisitorRequest
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for rejection
+      responses:
+        '200':
+          description: Visitor request rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitorRequest'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /logs/access:
+    get:
+      tags:
+        - Logs
+      summary: Get access logs
+      description: Retrieve gate access logs with filtering and pagination
+      operationId: getAccessLogs
+      parameters:
+        - name: gate_id
+          in: query
+          description: Filter by gate ID
+          schema:
+            type: string
+            format: uuid
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+            format: uuid
+        - name: access_type
+          in: query
+          description: Filter by access type
+          schema:
+            type: string
+            enum: [entry, exit]
+        - name: verification_status
+          in: query
+          description: Filter by verification status
+          schema:
+            type: string
+            enum: [granted, denied]
+        - name: date_from
+          in: query
+          description: Filter by access date from
+          schema:
+            type: string
+            format: date-time
+        - name: date_to
+          in: query
+          description: Filter by access date to
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of records per page
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Access logs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessLogsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /alerts:
+    get:
+      tags:
+        - Alerts
+      summary: List security alerts
+      description: Retrieve security alerts with filtering options
+      operationId: listSecurityAlerts
+      parameters:
+        - name: status
+          in: query
+          description: Filter by alert status
+          schema:
+            type: string
+            enum: [open, investigating, resolved, false_positive]
+        - name: severity
+          in: query
+          description: Filter by alert severity
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: alert_type
+          in: query
+          description: Filter by alert type
+          schema:
+            type: string
+            enum: [multiple_failed_access, after_hours_access, unauthorized_vehicle, system_error, suspicious_activity]
+        - name: assigned_to
+          in: query
+          description: Filter by assigned user
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of records per page
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Security alerts retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SecurityAlert'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /alerts/{alertId}:
+    get:
+      tags:
+        - Alerts
+      summary: Get security alert details
+      description: Retrieve detailed information about a security alert
+      operationId: getSecurityAlert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Security alert details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityAlert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /alerts/{alertId}/acknowledge:
+    post:
+      tags:
+        - Alerts
+      summary: Acknowledge security alert
+      description: Acknowledge a security alert to indicate it's being handled
+      operationId: acknowledgeSecurityAlert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Security alert acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityAlert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /alerts/{alertId}/resolve:
+    post:
+      tags:
+        - Alerts
+      summary: Resolve security alert
+      description: Mark a security alert as resolved
+      operationId: resolveSecurityAlert
+      parameters:
+        - name: alertId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolution_notes:
+                  type: string
+                  description: Notes about how the alert was resolved
+      responses:
+        '200':
+          description: Security alert resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityAlert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  schemas:
+    Gate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        location:
+          type: string
+        gate_type:
+          type: string
+          enum: [main, pedestrian, service, emergency]
+        operational_status:
+          type: string
+          enum: [active, maintenance, offline, error]
+        equipment_config:
+          type: object
+          additionalProperties: true
+        has_rfid_reader:
+          type: boolean
+        has_barrier:
+          type: boolean
+        operating_hours:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateGateRequest:
+      type: object
+      required:
+        - name
+        - gate_type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        location:
+          type: string
+          maxLength: 255
+        gate_type:
+          type: string
+          enum: [main, pedestrian, service, emergency]
+        equipment_config:
+          type: object
+          additionalProperties: true
+        has_rfid_reader:
+          type: boolean
+          default: false
+        has_barrier:
+          type: boolean
+          default: false
+        operating_hours:
+          type: object
+          additionalProperties: true
+
+    UpdateGateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        location:
+          type: string
+          maxLength: 255
+        operational_status:
+          type: string
+          enum: [active, maintenance, offline, error]
+        equipment_config:
+          type: object
+          additionalProperties: true
+        operating_hours:
+          type: object
+          additionalProperties: true
+
+    GateStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, maintenance, offline, error]
+        last_activity:
+          type: string
+          format: date-time
+        current_activity:
+          type: string
+        active_alerts:
+          type: integer
+          default: 0
+        equipment_health:
+          type: object
+          properties:
+            rfid_reader:
+              type: string
+              enum: [online, offline, error]
+            camera:
+              type: string
+              enum: [online, offline, error]
+            barrier:
+              type: string
+              enum: [online, offline, error]
+
+    AccessValidationRequest:
+      type: object
+      required:
+        - gate_id
+        - access_type
+        - verification_method
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        gate_id:
+          type: string
+          format: uuid
+        access_type:
+          type: string
+          enum: [entry, exit]
+        verification_method:
+          type: string
+          enum: [rfid, qr_code, manual, face_recognition, license_plate]
+        verification_data:
+          type: object
+          properties:
+            rfid_tag:
+              type: string
+            qr_code:
+              type: string
+            license_plate:
+              type: string
+            face_image_url:
+              type: string
+        person_name:
+          type: string
+        vehicle_plate:
+          type: string
+
+    AccessValidationResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+        access_code:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        person_info:
+          type: object
+          properties:
+            name:
+              type: string
+            household:
+              type: string
+            role:
+              type: string
+        gate_info:
+          type: object
+          properties:
+            name:
+              type: string
+            action:
+              type: string
+              enum: [open_barrier, allow_access, deny_access]
+
+    AccessPermission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        household_id:
+          type: string
+          format: uuid
+        gate_id:
+          type: string
+          format: uuid
+        permission_type:
+          type: string
+          enum: [resident, visitor, service, emergency]
+        access_level:
+          type: string
+          enum: [full, limited, time_restricted]
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        access_days:
+          type: array
+          items:
+            type: string
+        access_time_start:
+          type: string
+          format: time
+        access_time_end:
+          type: string
+          format: time
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateAccessPermissionRequest:
+      type: object
+      required:
+        - gate_id
+        - permission_type
+        - access_level
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        household_id:
+          type: string
+          format: uuid
+        gate_id:
+          type: string
+          format: uuid
+        permission_type:
+          type: string
+          enum: [resident, visitor, service, emergency]
+        access_level:
+          type: string
+          enum: [full, limited, time_restricted]
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        access_days:
+          type: array
+          items:
+            type: string
+        access_time_start:
+          type: string
+          format: time
+        access_time_end:
+          type: string
+          format: time
+
+    UpdateAccessPermissionRequest:
+      type: object
+      properties:
+        access_level:
+          type: string
+          enum: [full, limited, time_restricted]
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        access_days:
+          type: array
+          items:
+            type: string
+        access_time_start:
+          type: string
+          format: time
+        access_time_end:
+          type: string
+          format: time
+        is_active:
+          type: boolean
+
+    VisitorRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        household_id:
+          type: string
+          format: uuid
+        visitor_name:
+          type: string
+        visitor_contact:
+          type: string
+        visitor_email:
+          type: string
+        vehicle_plate:
+          type: string
+        visit_purpose:
+          type: string
+        expected_arrival:
+          type: string
+          format: date-time
+        expected_departure:
+          type: string
+          format: date-time
+        access_granted:
+          type: boolean
+        access_granted_at:
+          type: string
+          format: date-time
+        granted_by:
+          type: string
+          format: uuid
+        qr_code:
+          type: string
+        temporary_access_code:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired, checked_in, checked_out]
+        check_in_time:
+          type: string
+          format: date-time
+        check_out_time:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateVisitorRequest:
+      type: object
+      required:
+        - household_id
+        - visitor_name
+        - expected_arrival
+      properties:
+        household_id:
+          type: string
+          format: uuid
+        visitor_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        visitor_contact:
+          type: string
+          maxLength: 100
+        visitor_email:
+          type: string
+          format: email
+        vehicle_plate:
+          type: string
+          maxLength: 20
+        visit_purpose:
+          type: string
+        expected_arrival:
+          type: string
+          format: date-time
+        expected_departure:
+          type: string
+          format: date-time
+        notes:
+          type: string
+
+    SecurityAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        alert_type:
+          type: string
+          enum: [multiple_failed_access, after_hours_access, unauthorized_vehicle, system_error, suspicious_activity]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        title:
+          type: string
+        description:
+          type: string
+        source_data:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [open, investigating, resolved, false_positive]
+        assigned_to:
+          type: string
+          format: uuid
+        acknowledged_at:
+          type: string
+          format: date-time
+        acknowledged_by:
+          type: string
+          format: uuid
+        resolved_at:
+          type: string
+          format: date-time
+        resolved_by:
+          type: string
+          format: uuid
+        resolution_notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AccessLogsResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/GateAccessLog'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    GateAccessLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        household_id:
+          type: string
+          format: uuid
+        gate_id:
+          type: string
+          format: uuid
+        access_type:
+          type: string
+          enum: [entry, exit]
+        verification_method:
+          type: string
+          enum: [rfid, qr_code, manual, face_recognition, license_plate]
+        verification_status:
+          type: string
+          enum: [granted, denied]
+        access_timestamp:
+          type: string
+          format: date-time
+        denial_reason:
+          type: string
+        person_name:
+          type: string
+        vehicle_plate:
+          type: string
+        additional_data:
+          type: object
+          additionalProperties: true
+        guard_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: string
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+# WebSocket Events Definition
+webhooks:
+  gate-activity:
+    post:
+      summary: Real-time gate activity events
+      description: WebSocket events for real-time gate activity updates
+      tags:
+        - Real-time
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event_type:
+                  type: string
+                  enum: [gate_activity, security_alert, gate_status_change]
+                data:
+                  oneOf:
+                    - $ref: '#/components/schemas/GateAccessLog'
+                    - $ref: '#/components/schemas/SecurityAlert'
+                    - $ref: '#/components/schemas/GateStatus'
+                timestamp:
+                  type: string
+                  format: date-time
