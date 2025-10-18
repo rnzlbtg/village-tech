@@ -8,7 +8,8 @@ CREATE POLICY "Super admins manage all properties"
 ON properties
 FOR ALL
 TO authenticated
-USING ((auth.jwt() ->> 'role')::TEXT = 'super_admin');
+USING ((auth.jwt() ->> 'role')::TEXT = 'super_admin')
+WITH CHECK ((auth.jwt() ->> 'role')::TEXT = 'super_admin');
 
 -- Policy: Tenant admins can manage properties in their tenant
 CREATE POLICY "Admins manage tenant properties"
@@ -16,6 +17,10 @@ ON properties
 FOR ALL
 TO authenticated
 USING (
+  tenant_id = (auth.jwt() ->> 'tenant_id')::UUID
+  AND (auth.jwt() ->> 'role')::TEXT IN ('admin_head', 'admin_officer')
+)
+WITH CHECK (
   tenant_id = (auth.jwt() ->> 'tenant_id')::UUID
   AND (auth.jwt() ->> 'role')::TEXT IN ('admin_head', 'admin_officer')
 );

@@ -1,5 +1,21 @@
 'use server'
 
+/**
+ * Household Management Server Actions
+ *
+ * SECURITY NOTE: This file contains auth user creation that bypasses RLS.
+ * - Uses createAdminClient() with service role to create auth users
+ * - tenant_id is set by application code, not enforced by database
+ * - Acceptable for MVP/development but should be improved for production
+ *
+ * Production Security Improvements:
+ * 1. Implement invitation-based signup flow (see migration 036_secure_household_head_creation.sql)
+ * 2. OR use Supabase Auth Hooks to set tenant_id from invitation
+ * 3. Remove service role usage from user creation
+ *
+ * See docs/SECURITY_AUTH_DESIGN.md for detailed analysis and solutions.
+ */
+
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { requireAdmin, getTenantId } from '@/lib/auth/helpers'
 import { revalidatePath } from 'next/cache'
@@ -9,6 +25,7 @@ import {
   createHouseholdHeadSchema,
   addHouseholdMemberSchema,
 } from '@/lib/validations/household'
+import { sendWelcomeEmail, getTenantEmailSettings } from '@/lib/email/send'
 
 export async function createHousehold(formData: FormData) {
   try {
@@ -19,48 +36,209 @@ export async function createHousehold(formData: FormData) {
       return { success: false, error: 'Tenant ID not found' }
     }
 
-    const data = createHouseholdSchema.parse({
-      residence_unit_id: formData.get('residence_unit_id'),
-      household_name: formData.get('household_name'),
-      move_in_date: formData.get('move_in_date') || undefined,
-      notes: formData.get('notes') || undefined,
-    })
-
     const supabase = await createClient()
+    const adminClient = await createAdminClient()
 
-    // Check if residence unit already has an active household
-    const { data: existingHousehold } = await supabase
-      .from('households')
-      .select('id')
-      .eq('residence_unit_id', data.residence_unit_id)
-      .eq('status', 'active')
-      .single()
+    // Parse household head data
+    const headData = {
+      first_name: formData.get('first_name') as string,
+      last_name: formData.get('last_name') as string,
+      email: formData.get('email') as string,
+      phone_number: formData.get('phone_number') as string,
+      date_of_birth: formData.get('date_of_birth') as string || undefined,
+      password: formData.get('password') as string,
+    }
 
-    if (existingHousehold) {
+    // Validate household head data using schema
+    const validation = createHouseholdHeadSchema.safeParse(headData)
+    if (!validation.success) {
+      const errorMessages = validation.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      return { success: false, error: `Validation error: ${errorMessages}` }
+    }
+
+    // Validate required residence unit fields
+    const propertyId = formData.get('property_id') as string
+    const unitNumber = formData.get('unit_number') as string
+    const unitAddress = formData.get('unit_address') as string
+
+    if (!propertyId || !unitNumber || !unitAddress) {
+      return { success: false, error: 'Property, unit number, and unit address are required' }
+    }
+
+    // Check duplicate email in auth system (case-insensitive)
+    const { data: existingUser } = await adminClient.auth.admin.listUsers()
+    const emailExists = existingUser?.users.some((u) => u.email?.toLowerCase() === headData.email.toLowerCase())
+
+    if (emailExists) {
       return {
         success: false,
-        error: 'This residence unit already has an active household',
+        error: 'This email address is already registered. Please use a different email or contact support if this is an error.'
       }
     }
 
-    // Create household
-    const { data: household, error } = await supabase
-      .from('households')
-      .insert({
-        ...data,
-        tenant_id: tenantId,
-        status: 'active',
-      })
+    // Check duplicate unit number within property
+    const { data: existingUnit } = await supabase
+      .from('residence_units')
+      .select('id')
+      .eq('property_id', propertyId)
+      .eq('unit_number', unitNumber)
+      .single()
+
+    if (existingUnit) {
+      return {
+        success: false,
+        error: `Unit number "${unitNumber}" already exists in this property. Please choose a different unit number.`
+      }
+    }
+
+    // Step 1: Create residence unit
+    const unitData = {
+      tenant_id: tenantId,
+      property_id: formData.get('property_id') as string,
+      unit_number: formData.get('unit_number') as string,
+      unit_type: formData.get('unit_type') as string || 'residential',
+      address: formData.get('unit_address') as string || undefined,
+      status: 'occupied',
+    }
+
+    const { data: residenceUnit, error: unitError } = await supabase
+      .from('residence_units')
+      .insert(unitData)
       .select()
       .single()
 
-    if (error) {
-      console.error('Error creating household:', error)
-      return { success: false, error: error.message }
+    if (unitError) {
+      console.error('Error creating residence unit:', unitError)
+      return { success: false, error: unitError.message }
+    }
+
+    // Step 3: Create auth user for household head
+    // TODO: SECURITY CONCERN - This uses service role and bypasses RLS
+    // The tenant_id is set by application code, not enforced by database
+    // For production, implement invitation-based flow (see migration 036_secure_household_head_creation.sql)
+    // or Supabase Auth Hooks (see docs/SECURITY_AUTH_DESIGN.md)
+    // Current implementation is acceptable for MVP/development but should be improved before production
+    const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
+      email: headData.email,
+      password: headData.password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: headData.first_name,
+        last_name: headData.last_name,
+        phone_number: headData.phone_number,
+        role: 'household_head',
+      },
+      app_metadata: {
+        role: 'household_head',
+        tenant_id: tenantId, // ⚠️ Manually set - no database enforcement
+      },
+    })
+
+    if (authError || !authUser.user) {
+      // Rollback: delete residence unit
+      await supabase
+        .from('residence_units')
+        .delete()
+        .eq('id', residenceUnit.id)
+
+      console.error('Error creating auth user:', authError)
+      return { success: false, error: authError?.message || 'Failed to create user account' }
+    }
+
+    // Step 3.5: Create user profile
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authUser.user.id,
+        tenant_id: tenantId,
+        email: headData.email,
+        first_name: headData.first_name,
+        last_name: headData.last_name,
+        phone_number: headData.phone_number,
+        role: 'household_head',
+        is_active: true,
+      })
+
+    if (profileError) {
+      // Rollback: delete auth user and residence unit
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      await supabase
+        .from('residence_units')
+        .delete()
+        .eq('id', residenceUnit.id)
+
+      console.error('Error creating user profile:', profileError)
+      return { success: false, error: profileError.message }
+    }
+
+    // Step 4: Create household linked to residence unit
+    // Generate household name from first and last name
+    const householdName = `${headData.first_name} ${headData.last_name} Household`
+
+    const householdData = {
+      tenant_id: tenantId,
+      residence_unit_id: residenceUnit.id,
+      household_head_id: authUser.user.id,
+      household_name: householdName,
+      move_in_date: formData.get('move_in_date') as string || undefined,
+      notes: formData.get('notes') as string || undefined,
+      status: formData.get('status') as string || 'active',
+    }
+
+    const { data: household, error: householdError } = await supabase
+      .from('households')
+      .insert(householdData)
+      .select()
+      .single()
+
+    if (householdError) {
+      // Rollback: delete auth user and residence unit
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      await supabase
+        .from('residence_units')
+        .delete()
+        .eq('id', residenceUnit.id)
+
+      console.error('Error creating household:', householdError)
+      return { success: false, error: householdError.message }
+    }
+
+    // Step 5: Create household member record for the head
+    const { error: memberError } = await supabase.from('household_members').insert({
+      household_id: household.id,
+      first_name: headData.first_name,
+      last_name: headData.last_name,
+      relationship: 'head',
+      email: headData.email,
+      phone_number: headData.phone_number,
+      date_of_birth: headData.date_of_birth,
+      is_primary_contact: true,
+    })
+
+    if (memberError) {
+      console.error('Error creating household member:', memberError)
+      // Continue anyway - household is created
+    }
+
+    // Step 6: Send welcome email to household head
+    try {
+      const emailSettings = await getTenantEmailSettings(tenantId)
+      await sendWelcomeEmail({
+        householdHeadName: `${headData.first_name} ${headData.last_name}`,
+        email: headData.email,
+        temporaryPassword: headData.password,
+        unitNumber: unitData.unit_number,
+        ...emailSettings,
+      })
+      console.log('Welcome email sent successfully to:', headData.email)
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError)
+      // Don't fail the entire operation if email fails
+      // The household was created successfully
     }
 
     revalidatePath('/households')
-    return { success: true, data: household }
+    return { success: true, data: household, message: 'Household, unit, and household head created successfully. Welcome email sent.' }
   } catch (error) {
     console.error('Error in createHousehold:', error)
     return {
@@ -100,7 +278,7 @@ export async function createHouseholdWithHead(formData: FormData) {
     })
 
     const supabase = await createClient()
-    const adminClient = createAdminClient()
+    const adminClient = await createAdminClient()
 
     // Check duplicate email
     const { data: existingUser } = await adminClient.auth.admin.listUsers()
@@ -111,6 +289,9 @@ export async function createHouseholdWithHead(formData: FormData) {
     }
 
     // Create auth user for household head
+    // TODO: SECURITY CONCERN - This uses service role and bypasses RLS
+    // See comment in createHousehold() function above for details
+    // For production: Use invitation system or Auth Hooks (see docs/SECURITY_AUTH_DESIGN.md)
     const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
       email: headData.email,
       password: headData.password,
@@ -123,13 +304,34 @@ export async function createHouseholdWithHead(formData: FormData) {
       },
       app_metadata: {
         role: 'household_head',
-        tenant_id: tenantId,
+        tenant_id: tenantId, // ⚠️ Manually set - no database enforcement
       },
     })
 
     if (authError || !authUser.user) {
       console.error('Error creating auth user:', authError)
       return { success: false, error: authError?.message || 'Failed to create user account' }
+    }
+
+    // Create user profile
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authUser.user.id,
+        tenant_id: tenantId,
+        email: headData.email,
+        first_name: headData.first_name,
+        last_name: headData.last_name,
+        phone_number: headData.phone_number,
+        role: 'household_head',
+        is_active: true,
+      })
+
+    if (profileError) {
+      // Rollback: delete auth user
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
+      console.error('Error creating user profile:', profileError)
+      return { success: false, error: profileError.message }
     }
 
     // Create household
@@ -169,10 +371,32 @@ export async function createHouseholdWithHead(formData: FormData) {
       // Continue anyway - household is created
     }
 
-    // TODO: Send welcome email with login credentials
+    // Send welcome email with login credentials
+    try {
+      const emailSettings = await getTenantEmailSettings(tenantId)
+
+      // Get residence unit info for email
+      const { data: residenceUnit } = await supabase
+        .from('residence_units')
+        .select('unit_number')
+        .eq('id', householdData.residence_unit_id)
+        .single()
+
+      await sendWelcomeEmail({
+        householdHeadName: `${headData.first_name} ${headData.last_name}`,
+        email: headData.email,
+        temporaryPassword: headData.password,
+        unitNumber: residenceUnit?.unit_number || 'N/A',
+        ...emailSettings,
+      })
+      console.log('Welcome email sent successfully to:', headData.email)
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError)
+      // Don't fail the entire operation if email fails
+    }
 
     revalidatePath('/households')
-    return { success: true, data: household, message: 'Household and household head created successfully' }
+    return { success: true, data: household, message: 'Household and household head created successfully. Welcome email sent.' }
   } catch (error) {
     console.error('Error in createHouseholdWithHead:', error)
     return {

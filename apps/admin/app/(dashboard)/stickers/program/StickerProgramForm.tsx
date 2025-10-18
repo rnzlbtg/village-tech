@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 export default function StickerProgramForm() {
   const [formData, setFormData] = useState({
     program_name: '',
+    program_year: new Date().getFullYear(),
     stickers_per_household: 2,
     effective_date: new Date().toISOString().split('T')[0],
     expiry_date: '',
@@ -20,6 +21,7 @@ export default function StickerProgramForm() {
     try {
       const result = await setStickerProgram({
         program_name: formData.program_name,
+        program_year: formData.program_year,
         stickers_per_household: formData.stickers_per_household,
         effective_date: formData.effective_date,
         expiry_date: formData.expiry_date || undefined,
@@ -30,6 +32,7 @@ export default function StickerProgramForm() {
         // Reset form
         setFormData({
           program_name: '',
+          program_year: new Date().getFullYear(),
           stickers_per_household: 2,
           effective_date: new Date().toISOString().split('T')[0],
           expiry_date: '',
@@ -57,6 +60,22 @@ export default function StickerProgramForm() {
           value={formData.program_name}
           onChange={(e) => setFormData({ ...formData, program_name: e.target.value })}
           placeholder="e.g., 2025 Vehicle Sticker Program"
+          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+        />
+      </div>
+
+      <div>
+        <label htmlFor="program_year" className="block text-sm font-medium mb-2">
+          Program Year *
+        </label>
+        <input
+          type="number"
+          id="program_year"
+          value={formData.program_year}
+          onChange={(e) => setFormData({ ...formData, program_year: parseInt(e.target.value) })}
+          min="2020"
+          max="2100"
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />

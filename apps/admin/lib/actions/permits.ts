@@ -84,7 +84,8 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     // Get permit with household info
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(
           id,
@@ -92,7 +93,8 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
           tenant_id,
           household_head_id
         )
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -102,15 +104,25 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     }
 
     // Check permit status
-    if (permit.status !== 'pending') {
-      return { success: false, error: `Permit is already ${permit.status}` }
+    if (permit.permit_status !== 'pending') {
+      return { success: false, error: `Permit is already ${permit.permit_status}` }
     }
 
-    // Validate payment if required
-    if (permit.road_fee > 0 && permit.payment_status !== 'paid') {
-      return {
-        success: false,
-        error: 'Payment must be completed before approval',
+    // Validate payment if required - check if payment has been completed
+    if (permit.road_fee_amount > 0) {
+      // Check if there's a payment record for this permit
+      const { data: paymentRecord, error: paymentError } = await supabase
+        .from('payment_logs')
+        .select('*')
+        .eq('permit_request_id', data.permit_id)
+        .eq('payment_status', 'completed')
+        .maybeSingle()
+
+      if (paymentError || !paymentRecord) {
+        return {
+          success: false,
+          error: 'Payment must be completed before approval',
+        }
       }
     }
 
@@ -118,7 +130,7 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     const { error: updateError } = await supabase
       .from('construction_permits')
       .update({
-        status: 'approved',
+        permit_status: 'approved',
         approved_at: new Date().toISOString(),
         approved_by: userId,
       })
@@ -132,8 +144,8 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     if (permit.household.household_head_id) {
       const { data: householdHead } = await supabase
         .from('user_profiles')
-        .select('full_name, email')
-        .eq('user_id', permit.household.household_head_id)
+        .select('first_name, last_name, email')
+        .eq('id', permit.household.household_head_id)
         .single()
 
       if (householdHead?.email) {
@@ -142,11 +154,13 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
           : []
 
         const emailTemplate = constructionPermitApprovedEmail({
-          householdHeadName: householdHead.full_name || 'Resident',
+          householdHeadName: householdHead
+            ? `${householdHead.first_name} ${householdHead.last_name}`
+            : 'Resident',
           permitReference: permit.permit_reference,
           projectDescription: permit.project_description,
           startDate: new Date(permit.start_date).toLocaleDateString(),
-          endDate: new Date(permit.end_date).toLocaleDateString(),
+          endDate: new Date(permit.estimated_end_date).toLocaleDateString(),
           authorizedWorkers: workerNames,
         })
 
@@ -160,7 +174,7 @@ export async function approveConstructionPermit(input: ApproveConstructionPermit
     }
 
     // T068: Send notification to guard house (logged for MVP)
-    console.log('📋 Guard House Notification:', {
+    console.log('Guard House Notification:', {
       permit_reference: permit.permit_reference,
       household: permit.household.household_name,
       authorized_workers: permit.authorized_workers,
@@ -197,10 +211,12 @@ export async function rejectConstructionPermit(input: RejectConstructionPermitIn
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id, household_head_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -210,16 +226,16 @@ export async function rejectConstructionPermit(input: RejectConstructionPermitIn
     }
 
     // Check permit status
-    if (permit.status !== 'pending') {
-      return { success: false, error: `Permit is already ${permit.status}` }
+    if (permit.permit_status !== 'pending') {
+      return { success: false, error: `Permit is already ${permit.permit_status}` }
     }
 
     // Reject the permit (store reason in notes or add rejection_reason column)
     const { error: updateError } = await supabase
       .from('construction_permits')
       .update({
-        status: 'rejected',
-        // Note: rejection_reason field should be added to schema
+        permit_status: 'rejected',
+        rejection_reason: data.rejection_reason,
       })
       .eq('id', data.permit_id)
 
@@ -262,10 +278,12 @@ export async function markPermitComplete(input: MarkPermitCompleteInput) {
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -275,10 +293,10 @@ export async function markPermitComplete(input: MarkPermitCompleteInput) {
     }
 
     // Check permit status
-    if (!['approved', 'in_progress'].includes(permit.status)) {
+    if (permit.permit_status !== 'approved') {
       return {
         success: false,
-        error: `Cannot complete permit with status: ${permit.status}`,
+        error: `Cannot complete permit with status: ${permit.permit_status}`,
       }
     }
 
@@ -286,8 +304,8 @@ export async function markPermitComplete(input: MarkPermitCompleteInput) {
     const { error: updateError } = await supabase
       .from('construction_permits')
       .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
+        permit_status: 'completed',
+        actual_end_date: new Date().toISOString().split('T')[0],
       })
       .eq('id', data.permit_id)
 
@@ -330,10 +348,12 @@ export async function holdPermit(input: HoldPermitInput) {
     // Get permit
     const { data: permit, error: permitError } = await supabase
       .from('construction_permits')
-      .select(`
+      .select(
+        `
         *,
         household:households!inner(tenant_id, household_head_id)
-      `)
+      `
+      )
       .eq('id', data.permit_id)
       .eq('household.tenant_id', tenantId)
       .single()
@@ -346,7 +366,7 @@ export async function holdPermit(input: HoldPermitInput) {
     const { error: updateError } = await supabase
       .from('construction_permits')
       .update({
-        status: 'on_hold',
+        permit_status: 'on_hold',
       })
       .eq('id', data.permit_id)
 
@@ -371,6 +391,73 @@ export async function holdPermit(input: HoldPermitInput) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to hold permit',
+    }
+  }
+}
+
+/**
+ * Resume a held permit
+ */
+export async function unholdPermit(input: { permit_id: string }) {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+    const tenantId = await getTenantId()
+
+    // Get permit
+    const { data: permit, error: permitError } = await supabase
+      .from('construction_permits')
+      .select(
+        `
+        *,
+        household:households!inner(tenant_id)
+      `
+      )
+      .eq('id', input.permit_id)
+      .eq('household.tenant_id', tenantId)
+      .single()
+
+    if (permitError || !permit) {
+      return { success: false, error: 'Construction permit not found' }
+    }
+
+    // Check if permit is on hold
+    if (permit.permit_status !== 'on_hold') {
+      return {
+        success: false,
+        error: 'Only held permits can be resumed',
+      }
+    }
+
+    // Resume the permit
+    const { error: updateError } = await supabase
+      .from('construction_permits')
+      .update({
+        permit_status: 'approved',
+      })
+      .eq('id', input.permit_id)
+
+    if (updateError) {
+      return { success: false, error: 'Failed to resume permit' }
+    }
+
+    // Notify household and guard house
+    console.log('✅ Permit Resumed:', {
+      permit_id: input.permit_id,
+      permit_reference: permit.permit_reference,
+    })
+
+    revalidatePath('/permits')
+
+    return {
+      success: true,
+      message: 'Construction permit resumed successfully',
+    }
+  } catch (error) {
+    console.error('Error in unholdPermit:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to resume permit',
     }
   }
 }

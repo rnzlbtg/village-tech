@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTenantId } from '@/lib/auth/helpers'
 import Link from 'next/link'
-import { DollarSign, FileText, TrendingUp, AlertCircle } from 'lucide-react'
+import { DollarSign, FileText, TrendingUp, AlertCircle, Receipt, History, Settings } from 'lucide-react'
 
 export const metadata = {
   title: 'Fees & Payments | Admin',
@@ -111,33 +111,51 @@ export default async function FeesPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Link
-          href="/fees/invoices"
-          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow border-l-4 border-primary"
+          href="/fees/structure"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow border-l-4 border-blue-500"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">View All Invoices</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Fee Structure</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Manage and track all fee invoices
+                Configure association fees and billing periods
               </p>
             </div>
-            <FileText className="h-8 w-8 text-primary" />
+            <Settings className="h-8 w-8 text-blue-600" />
           </div>
         </Link>
 
-        <div className="bg-white rounded-lg shadow p-6 border-l-4 border-gray-300 opacity-60">
+        <Link
+          href="/fees/payments"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow border-l-4 border-green-500"
+        >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800">Fee Configuration</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Record Payment</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Set up fee types and schedules (Coming soon)
+                Record new household fee payments
               </p>
             </div>
-            <DollarSign className="h-8 w-8 text-gray-400" />
+            <Receipt className="h-8 w-8 text-green-600" />
           </div>
-        </div>
+        </Link>
+
+        <Link
+          href="/fees/history"
+          className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow border-l-4 border-purple-500"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">Payment History</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                View all recorded payments and receipts
+              </p>
+            </div>
+            <History className="h-8 w-8 text-purple-600" />
+          </div>
+        </Link>
       </div>
     </div>
   )

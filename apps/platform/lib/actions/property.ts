@@ -9,7 +9,8 @@ export async function createProperty(formData: FormData) {
   try {
     await requireSuperAdmin()
 
-    const supabase = await createClient()
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     const data = createPropertySchema.parse({
       tenant_id: formData.get('tenant_id'),
@@ -63,7 +64,8 @@ export async function updateProperty(formData: FormData) {
   try {
     await requireSuperAdmin()
 
-    const supabase = await createClient()
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     const data = updatePropertySchema.parse({
       id: formData.get('id'),
@@ -121,7 +123,8 @@ export async function deleteProperty(propertyId: string) {
   try {
     await requireSuperAdmin()
 
-    const supabase = await createClient()
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     // Check if property has residences
     const { count } = await supabase
@@ -165,7 +168,9 @@ export async function deleteProperty(propertyId: string) {
 
 export async function getProperties(tenantId: string) {
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS for super admin access
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     const { data: properties, error } = await supabase
       .from('properties')
@@ -190,7 +195,9 @@ export async function getProperties(tenantId: string) {
 
 export async function getProperty(propertyId: string) {
   try {
-    const supabase = await createClient()
+    // Use admin client to bypass RLS for super admin access
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
 
     const { data: property, error } = await supabase
       .from('properties')

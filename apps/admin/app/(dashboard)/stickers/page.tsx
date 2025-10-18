@@ -21,15 +21,17 @@ export default async function StickersPage({
     .from('sticker_requests')
     .select(`
       id,
-      vehicle_plate,
+      vehicle_plate_number,
       vehicle_make,
+      vehicle_model,
       vehicle_color,
-      owner_name,
-      status,
+      vehicle_type,
+      request_status,
       requested_at,
-      approved_at,
+      reviewed_at,
       distributed_at,
       rejection_reason,
+      sticker_code,
       household:households!inner(
         id,
         household_name,
@@ -39,12 +41,12 @@ export default async function StickersPage({
         )
       )
     `)
-    .eq('household.tenant_id', tenantId)
+    .eq('tenant_id', tenantId)
     .order('requested_at', { ascending: false })
 
   // Apply status filter
   if (statusFilter !== 'all') {
-    query = query.eq('status', statusFilter)
+    query = query.eq('request_status', statusFilter)
   }
 
   const { data: requests, error } = await query
@@ -64,7 +66,7 @@ export default async function StickersPage({
     .from('sticker_programs')
     .select('*')
     .eq('tenant_id', tenantId)
-    .eq('active', true)
+    .eq('is_active', true)
     .maybeSingle()
 
   return (

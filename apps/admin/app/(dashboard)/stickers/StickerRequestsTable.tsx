@@ -7,15 +7,17 @@ import StickerDistributionModal from './StickerDistributionModal'
 
 type StickerRequest = {
   id: string
-  vehicle_plate: string
+  vehicle_plate_number: string
   vehicle_make: string | null
+  vehicle_model: string | null
   vehicle_color: string | null
-  owner_name: string
-  status: string
+  vehicle_type: string | null
+  request_status: string
   requested_at: string
-  approved_at: string | null
+  reviewed_at: string | null
   distributed_at: string | null
   rejection_reason: string | null
+  sticker_code: string | null
   household: {
     id: string
     household_name: string
@@ -152,20 +154,20 @@ export default function StickerRequestsTable({ requests, currentStatus }: Props)
                   </td>
                   <td className="p-4">
                     <div>
-                      <div className="font-medium">{request.vehicle_plate}</div>
+                      <div className="font-medium">{request.vehicle_plate_number}</div>
                       <div className="text-sm text-gray-600">
                         {request.vehicle_make} {request.vehicle_color && `• ${request.vehicle_color}`}
                       </div>
                     </div>
                   </td>
-                  <td className="p-4">{request.owner_name}</td>
+                  <td className="p-4">{request.household.household_name}</td>
                   <td className="p-4">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${
-                        statusColors[request.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
+                        statusColors[request.request_status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {request.status.toUpperCase()}
+                      {request.request_status.toUpperCase()}
                     </span>
                     {request.rejection_reason && (
                       <div className="text-xs text-red-600 mt-1">
@@ -177,7 +179,7 @@ export default function StickerRequestsTable({ requests, currentStatus }: Props)
                     {new Date(request.requested_at).toLocaleDateString()}
                   </td>
                   <td className="p-4 text-right">
-                    {request.status === 'pending' && (
+                    {request.request_status === 'pending' && (
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => handleApprove(request.id)}
@@ -195,7 +197,7 @@ export default function StickerRequestsTable({ requests, currentStatus }: Props)
                         </button>
                       </div>
                     )}
-                    {request.status === 'approved' && (
+                    {request.request_status === 'approved' && (
                       <button
                         onClick={() => handleDistribute(request)}
                         className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
@@ -203,7 +205,7 @@ export default function StickerRequestsTable({ requests, currentStatus }: Props)
                         Distribute
                       </button>
                     )}
-                    {request.status === 'distributed' && (
+                    {request.request_status === 'distributed' && (
                       <span className="text-sm text-green-600">
                         ✓ Distributed {new Date(request.distributed_at!).toLocaleDateString()}
                       </span>

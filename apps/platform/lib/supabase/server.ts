@@ -41,9 +41,17 @@ export function createAdminClient() {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
-  // Debug: Log the key format (first 20 chars)
-  console.log('Service Role Key prefix:', serviceRoleKey.substring(0, 20))
+  // Debug: Log the key format
+  console.log('=== JWT Debug Info ===')
+  console.log('Service Role Key length:', serviceRoleKey.length)
+  console.log('Service Role Key prefix:', serviceRoleKey.substring(0, 30))
+  console.log('Service Role Key suffix:', serviceRoleKey.substring(serviceRoleKey.length - 20))
   console.log('Service Role Key segments:', serviceRoleKey.split('.').length)
+  console.log('Full key:', serviceRoleKey)
+  console.log('Key type:', typeof serviceRoleKey)
+  console.log('Has newlines:', serviceRoleKey.includes('\n'))
+  console.log('Has quotes:', serviceRoleKey.includes('"'))
+  console.log('=====================')
 
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

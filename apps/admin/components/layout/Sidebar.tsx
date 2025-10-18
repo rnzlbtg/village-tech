@@ -9,6 +9,7 @@ import {
   Home,
   Users,
   Car,
+  Building2,
   FileText,
   Megaphone,
   DollarSign,
@@ -25,17 +26,13 @@ interface SidebarProps {
   setSidebarOpen?: (open: boolean) => void
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-  tenantName,
-  userName,
-  sidebarOpen,
-  setSidebarOpen
-}) => {
+const Sidebar: React.FC<SidebarProps> = ({ tenantName, userName, sidebarOpen, setSidebarOpen }) => {
   const pathname = usePathname()
   const router = useRouter()
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Properties', href: '/properties', icon: Building2 },
     { name: 'Households', href: '/households', icon: Users },
     { name: 'Vehicle Stickers', href: '/stickers', icon: Car },
     { name: 'Construction Permits', href: '/permits', icon: FileText },
