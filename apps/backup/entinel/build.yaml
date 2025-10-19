@@ -1,0 +1,15 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          generate_connect_constructor: true
+          apply_converters_to_vars: true
+          generate_values_in_copy_with: true
+          scalar_bindings:
+            # Custom bindings for DateTime and other types if needed
+            # DateTime:
+            #   prism_type: timestamp
+        generate_connect_constructor: true
+        apply_converters_to_vars: true
+        generate_values_in_copy_with: true
