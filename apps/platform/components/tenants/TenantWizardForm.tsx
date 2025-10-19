@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createTenant } from '@/lib/actions/tenant'
 import { createAdminUser } from '@/lib/actions/admin-user'
 import { createGate } from '@/lib/actions/gate'
-import { Info, ArrowLeft, Plus, X, AlertTriangle } from 'lucide-react'
+import { sendAdminWelcomeEmail } from '@/lib/email'
+import { Info, ArrowLeft, Plus, X, AlertTriangle, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Gate {
@@ -20,6 +21,13 @@ export default function TenantWizardForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string
+    password: string
+    tenantName: string
+  } | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -119,6 +127,32 @@ export default function TenantWizardForm() {
         return newErrors
       })
     }
+  }
+
+  const generateTemporaryPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+    let password = ''
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+
+    setAdminUser((prev) => ({ ...prev, password }))
+
+    if (fieldErrors['admin-password']) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors['admin-password']
+        return newErrors
+      })
+    }
+
+    toast.success('Temporary password generated!', {
+      description: 'A secure 12-character password has been created.',
+    })
+  }
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev)
   }
 
   const validateStep = (step: number) => {
@@ -248,6 +282,32 @@ export default function TenantWizardForm() {
         return
       }
 
+      // Step 2.5: Send welcome email to admin user
+      toast.loading('Sending welcome email...', { id: toastId })
+
+      const adminLoginUrl = `${process.env.NEXT_PUBLIC_ADMIN_APP_URL || 'http://localhost:3001'}/login`
+      const emailResult = await sendAdminWelcomeEmail({
+        email: adminUser.email,
+        firstName: adminUser.first_name,
+        lastName: adminUser.last_name,
+        password: adminUser.password,
+        tenantName: formData.name,
+        adminLoginUrl,
+      })
+
+      if (!emailResult.success) {
+        console.error('Email sending failed:', emailResult.error)
+        // Don't fail the entire process if email fails, but log it
+        toast.warning('Community created but email may not have been sent', {
+          id: toastId,
+          description: 'Please manually share the login credentials with the admin user.',
+        })
+      } else {
+        toast.success('Welcome email sent!', {
+          description: 'Admin user will receive their login credentials via email.',
+        })
+      }
+
       // Step 3: Create gates if any were added
       if (gates.length > 0) {
         toast.loading(`Creating ${gates.length} gate(s)...`, { id: toastId })
@@ -289,16 +349,23 @@ export default function TenantWizardForm() {
         }
       }
 
-      // Step 4: Success
+      // Step 4: Success - Store credentials and show success screen
+      setCreatedCredentials({
+        email: adminUser.email,
+        password: adminUser.password,
+        tenantName: formData.name,
+      })
+      setEmailSent(emailResult.success)
+
       toast.success('Community created successfully!', {
         id: toastId,
-        description: 'Redirecting to community details...',
+        description: emailResult.success
+          ? 'Welcome email has been sent to the admin user.'
+          : 'Admin user credentials are ready to share.',
       })
 
-      setTimeout(() => {
-        router.push(`/tenants/${tenantId}`)
-        router.refresh()
-      }, 1500)
+      setCurrentStep(5)
+      setIsSubmitting(false)
     } catch (err) {
       toast.error('An unexpected error occurred', {
         id: toastId,
@@ -313,6 +380,7 @@ export default function TenantWizardForm() {
     { number: 2, title: 'Gates & Entrances' },
     { number: 3, title: 'Admin User' },
     { number: 4, title: 'Review & Submit' },
+    { number: 5, title: 'Success' },
   ]
 
   return (
@@ -744,22 +812,43 @@ export default function TenantWizardForm() {
                 >
                   Temporary Password *
                 </label>
-                <input
-                  type="password"
-                  id="admin-password"
-                  name="password"
-                  value={adminUser.password}
-                  onChange={handleAdminUserChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
-                    fieldErrors['admin-password'] ? 'border-red-500' : ''
-                  }`}
-                />
+                <div className="flex space-x-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="admin-password"
+                      name="password"
+                      value={adminUser.password}
+                      onChange={handleAdminUserChange}
+                      className={`w-full px-4 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary ${
+                        fieldErrors['admin-password'] ? 'border-red-500' : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateTemporaryPassword}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg flex items-center space-x-2 transition-colors duration-200"
+                    title="Generate secure temporary password"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="text-sm font-medium">Generate</span>
+                  </button>
+                </div>
                 {fieldErrors['admin-password'] && (
                   <p className="mt-1 text-sm text-red-500">{fieldErrors['admin-password']}</p>
                 )}
                 <p className="mt-1 text-xs text-gray-500">
                   Set a temporary password for the admin user (minimum 6 characters). User will be
-                  prompted to change it on first login.
+                  prompted to change it on first login. Click "Generate" for a secure 12-character password.
                 </p>
               </div>
 
@@ -890,73 +979,245 @@ export default function TenantWizardForm() {
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between space-x-4 pt-6 border-t mt-8">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-              >
-                Previous
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => router.push('/tenants')}
-                className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-            )}
+          {/* Step 5: Success - Admin Credentials */}
+          {currentStep === 5 && createdCredentials && (
+            <div className="space-y-6">
+              <div className="text-center py-8">
+                <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
 
-            {currentStep < 4 ? (
-              <button
-                type="button"
-                onClick={handleNextStep}
-                className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors duration-200"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg flex items-center transition-colors duration-200 ${
-                  isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Processing...
-                  </>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Community Created Successfully!
+                </h2>
+                <p className="text-gray-600 mb-8">
+                  {createdCredentials.tenantName} has been set up and is ready for management.
+                </p>
+
+                {emailSent ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+                    <div className="flex items-start mb-4">
+                      <svg className="h-5 w-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                      </svg>
+                      <div className="text-left">
+                        <h3 className="font-medium text-green-800 mb-1">
+                          ✅ Welcome Email Sent
+                        </h3>
+                        <p className="text-sm text-green-700">
+                          The admin user ({createdCredentials.email}) has been sent their login credentials via email. They can access the admin dashboard immediately.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  'Create Community'
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+                    <div className="flex items-start mb-4">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0" />
+                      <div className="text-left">
+                        <h3 className="font-medium text-amber-800 mb-1">
+                          Important: Save These Credentials
+                        </h3>
+                        <p className="text-sm text-amber-700">
+                          The welcome email could not be sent automatically. Please save these credentials securely and share them with the community administrator.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </button>
-            )}
-          </div>
+
+                <div className="space-y-4">
+                    <div className="bg-white rounded-lg p-4 border">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Admin Login URL
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${process.env.NEXT_PUBLIC_ADMIN_APP_URL || 'http://localhost:3001'}/login`}
+                          className="flex-1 px-3 py-2 bg-gray-50 border rounded-lg text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_ADMIN_APP_URL || 'http://localhost:3001'}/login`)
+                            toast.success('Login URL copied to clipboard!')
+                          }}
+                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border rounded-lg text-sm"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={createdCredentials.email}
+                          className="flex-1 px-3 py-2 bg-gray-50 border rounded-lg text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(createdCredentials.email)
+                            toast.success('Email copied to clipboard!')
+                          }}
+                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border rounded-lg text-sm"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Temporary Password
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1 relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            readOnly
+                            value={createdCredentials.password}
+                            className="w-full px-3 py-2 bg-gray-50 border rounded-lg text-sm pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(createdCredentials.password)
+                            toast.success('Password copied to clipboard!')
+                          }}
+                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 border rounded-lg text-sm"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Next Steps:</strong> The admin user should log in immediately and change their temporary password. They will have full access to manage {createdCredentials.tenantName}.
+                    </p>
+                  </div>
+
+                <div className="flex justify-center space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `Admin Login: ${process.env.NEXT_PUBLIC_ADMIN_APP_URL || 'http://localhost:3001'}/login\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`
+                      )
+                      toast.success('All credentials copied to clipboard!')
+                    }}
+                    className="px-6 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                    </svg>
+                    <span>Copy All Credentials</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Use Next.js router for proper client-side navigation
+                      router.push('/tenants')
+                    }}
+                    className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          {currentStep < 5 && (
+            <div className="flex justify-between space-x-4 pt-6 border-t mt-8">
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                >
+                  Previous
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => router.push('/tenants')}
+                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+              )}
+
+              {currentStep < 4 ? (
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors duration-200"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className={`px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg flex items-center transition-colors duration-200 ${
+                    isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Create Community'
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>

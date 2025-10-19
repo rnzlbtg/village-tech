@@ -8,9 +8,13 @@ import { useRouter } from 'next/navigation'
 export function RulesEditor({
   initialData,
   mode = 'create',
+  onSuccess,
+  onCancel,
 }: {
   initialData?: any
   mode?: 'create' | 'edit'
+  onSuccess?: () => void
+  onCancel?: () => void
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -49,7 +53,11 @@ export function RulesEditor({
 
       if (result.success) {
         toast.success(result.message || `Village rules ${mode === 'create' ? 'created' : 'updated'} successfully`)
-        router.push('/rules')
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push('/rules')
+        }
       } else {
         toast.error(result.error || `Failed to ${mode} village rules`)
       }
@@ -153,12 +161,13 @@ export function RulesEditor({
         >
           {loading ? 'Saving...' : mode === 'create' ? 'Create Rule' : 'Update Rule'}
         </button>
-        <a
-          href="/rules"
+        <button
+          type="button"
+          onClick={onCancel || (() => router.push('/rules'))}
           className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
         >
           Cancel
-        </a>
+        </button>
       </div>
     </form>
   )

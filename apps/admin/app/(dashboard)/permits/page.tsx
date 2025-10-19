@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getTenantId } from '@/lib/auth/helpers'
 import { redirect } from 'next/navigation'
+import { PermitApiTest } from '@/components/test/PermitApiTest'
 
 export const metadata = {
   title: 'Construction Permits | Admin',
@@ -100,6 +101,9 @@ export default async function PermitsPage({
           current={searchParams.status}
         />
       </div>
+
+      {/* API Test Component */}
+      <PermitApiTest />
 
       {/* Permits Table */}
       <div className="bg-white rounded-lg shadow">

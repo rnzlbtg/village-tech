@@ -47,44 +47,25 @@ export async function createVillageRules(input: CreateVillageRulesInput) {
     await requireAdmin()
     const supabase = await createClient()
     const tenantId = await getTenantId()
-    const userId = await getUserId()
 
     const data = createVillageRulesSchema.parse(input)
 
-    // Create village rules in association_settings or a dedicated village_rules table
-    // For MVP, store in association_settings as JSONB
-    const rulesData = {
-      title: data.title,
-      content: data.content,
-      effective_date: data.effective_date,
-      category: data.category || 'general',
-      version: 1,
-      created_by: userId,
-      created_at: new Date().toISOString(),
-      published: false,
-    }
-
-    // Get existing settings
-    const { data: settings, error: settingsError } = await supabase
-      .from('association_settings')
-      .select('village_rules')
-      .eq('tenant_id', tenantId)
+    // Create village rule in the dedicated village_rules table
+    const { data: rule, error } = await supabase
+      .from('village_rules')
+      .insert({
+        tenant_id: tenantId,
+        rule_category: data.category || 'general',
+        title: data.title,
+        description: data.content,
+        effective_date: data.effective_date,
+        is_active: true,
+        published: false,
+        version: 1,
+        display_order: 0,
+      })
+      .select()
       .single()
-
-    const existingRules = settings?.village_rules || []
-    const newRulesArray = [...existingRules, { id: crypto.randomUUID(), ...rulesData }]
-
-    // Update settings with new rules
-    const { error } = await supabase
-      .from('association_settings')
-      .upsert(
-        {
-          tenant_id: tenantId,
-          village_rules: newRulesArray,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'tenant_id' }
-      )
 
     if (error) {
       console.error('Error creating village rules:', error)
@@ -96,7 +77,7 @@ export async function createVillageRules(input: CreateVillageRulesInput) {
     return {
       success: true,
       message: 'Village rules created successfully',
-      data: { id: newRulesArray[newRulesArray.length - 1].id },
+      data: { id: rule.id },
     }
   } catch (error) {
     console.error('Error in createVillageRules:', error)
@@ -118,48 +99,22 @@ export async function updateVillageRules(input: UpdateVillageRulesInput) {
 
     const data = updateVillageRulesSchema.parse(input)
 
-    // Get existing rules
-    const { data: settings, error: settingsError } = await supabase
-      .from('association_settings')
-      .select('village_rules')
-      .eq('tenant_id', tenantId)
-      .single()
+    // Update the rule in the village_rules table
+    const updateData: any = {}
+    if (data.title) updateData.title = data.title
+    if (data.content) updateData.description = data.content
+    if (data.effective_date) updateData.effective_date = data.effective_date
+    if (data.category) updateData.rule_category = data.category
 
-    if (settingsError || !settings) {
-      return { success: false, error: 'Village rules not found' }
-    }
-
-    const existingRules = settings.village_rules || []
-    const ruleIndex = existingRules.findIndex((rule: any) => rule.id === data.rules_id)
-
-    if (ruleIndex === -1) {
-      return { success: false, error: 'Rule not found' }
-    }
-
-    // Update the rule
-    const updatedRule = {
-      ...existingRules[ruleIndex],
-      ...(data.title && { title: data.title }),
-      ...(data.content && { content: data.content }),
-      ...(data.effective_date && { effective_date: data.effective_date }),
-      ...(data.category && { category: data.category }),
-      version: existingRules[ruleIndex].version + 1,
-      updated_at: new Date().toISOString(),
-    }
-
-    existingRules[ruleIndex] = updatedRule
-
-    // Save updated rules
     const { error } = await supabase
-      .from('association_settings')
-      .update({
-        village_rules: existingRules,
-        updated_at: new Date().toISOString(),
-      })
+      .from('village_rules')
+      .update(updateData)
+      .eq('id', data.rules_id)
       .eq('tenant_id', tenantId)
 
     if (error) {
-      return { success: false, error: 'Failed to update village rules' }
+      console.error('Error updating village rules:', error)
+      return { success: false, error: error.message }
     }
 
     revalidatePath('/rules')
@@ -185,24 +140,21 @@ export async function setCurfewTimes(input: SetCurfewTimesInput) {
     await requireAdmin()
     const supabase = await createClient()
     const tenantId = await getTenantId()
+    const userId = await getUserId()
 
     const data = setCurfewTimesSchema.parse(input)
 
-    // Store curfew in association_settings
+    // Store curfew in the dedicated curfew_settings table
     const { error } = await supabase
-      .from('association_settings')
+      .from('curfew_settings')
       .upsert(
         {
           tenant_id: tenantId,
-          curfew_settings: {
-            start_time: data.start_time,
-            end_time: data.end_time,
-            days_of_week: data.days_of_week,
-            affected_gates: data.affected_gates || [],
-            active: data.active !== false,
-            updated_at: new Date().toISOString(),
-          },
-          updated_at: new Date().toISOString(),
+          start_time: data.start_time,
+          end_time: data.end_time,
+          days_of_week: data.days_of_week,
+          active: data.active !== false,
+          updated_by: userId,
         },
         { onConflict: 'tenant_id' }
       )
@@ -242,49 +194,43 @@ export async function publishRules(input: PublishRulesInput) {
     await requireAdmin()
     const supabase = await createClient()
     const tenantId = await getTenantId()
+    const userId = await getUserId()
 
     const data = publishRulesSchema.parse(input)
 
-    // Get existing rules
-    const { data: settings, error: settingsError } = await supabase
-      .from('association_settings')
-      .select('village_rules')
+    // Get the rule to publish
+    const { data: rule, error: fetchError } = await supabase
+      .from('village_rules')
+      .select('*')
+      .eq('id', data.rules_id)
       .eq('tenant_id', tenantId)
       .single()
 
-    if (settingsError || !settings) {
-      return { success: false, error: 'Village rules not found' }
-    }
-
-    const existingRules = settings.village_rules || []
-    const ruleIndex = existingRules.findIndex((rule: any) => rule.id === data.rules_id)
-
-    if (ruleIndex === -1) {
+    if (fetchError || !rule) {
       return { success: false, error: 'Rule not found' }
     }
 
     // Mark rule as published
-    existingRules[ruleIndex].published = true
-    existingRules[ruleIndex].published_at = new Date().toISOString()
-
-    // Save updated rules
     const { error } = await supabase
-      .from('association_settings')
+      .from('village_rules')
       .update({
-        village_rules: existingRules,
-        updated_at: new Date().toISOString(),
+        published: true,
+        published_at: new Date().toISOString(),
+        published_by: userId,
       })
+      .eq('id', data.rules_id)
       .eq('tenant_id', tenantId)
 
     if (error) {
-      return { success: false, error: 'Failed to publish rules' }
+      console.error('Error publishing rules:', error)
+      return { success: false, error: error.message }
     }
 
     // T108: Notify residents when new rules are published
     if (data.notify_residents !== false) {
       console.log('📢 Notification - Rules Published to Residents:', {
         rules_id: data.rules_id,
-        title: existingRules[ruleIndex].title,
+        title: rule.title,
       })
     }
 
@@ -292,20 +238,20 @@ export async function publishRules(input: PublishRulesInput) {
     if (data.notify_guards !== false) {
       console.log('📢 Notification - Rules Published to Guards:', {
         rules_id: data.rules_id,
-        title: existingRules[ruleIndex].title,
+        title: rule.title,
       })
     }
 
     // T110: Create announcement linking rules publication
     const { error: announcementError } = await supabase.from('announcements').insert({
       tenant_id: tenantId,
-      title: `New Village Rules: ${existingRules[ruleIndex].title}`,
+      title: `New Village Rules: ${rule.title}`,
       content: `New village rules have been published. Please review the updated community guidelines.`,
       priority: 'high',
       target_audience: ['residents', 'guards', 'security'],
       published_at: new Date().toISOString(),
-      active: true,
-      created_by: await getUserId(),
+      is_published: true,
+      published_by: userId,
     })
 
     if (announcementError) {
@@ -324,6 +270,99 @@ export async function publishRules(input: PublishRulesInput) {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to publish rules',
+    }
+  }
+}
+
+/**
+ * Get village rules for display
+ */
+export async function getVillageRules() {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+    const tenantId = await getTenantId()
+
+    // Get rules from the village_rules table
+    const { data: rules, error } = await supabase
+      .from('village_rules')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching village rules:', error)
+      return { success: false, error: error.message }
+    }
+
+    // Transform the data to match the expected format for the UI
+    const transformedRules = rules?.map(rule => ({
+      id: rule.id,
+      title: rule.title,
+      content: rule.description,
+      category: rule.rule_category,
+      effective_date: rule.effective_date,
+      published: rule.published,
+      published_at: rule.published_at,
+      version: rule.version,
+      is_active: rule.is_active,
+      created_at: rule.created_at,
+      updated_at: rule.updated_at,
+    })) || []
+
+    return { success: true, data: transformedRules }
+  } catch (error) {
+    console.error('Error in getVillageRules:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch village rules',
+    }
+  }
+}
+
+/**
+ * Get curfew settings for display
+ */
+export async function getCurfewSettings() {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+    const tenantId = await getTenantId()
+
+    // Get curfew settings from the dedicated curfew_settings table
+    const { data: settings, error } = await supabase
+      .from('curfew_settings')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No settings found yet, return null
+        return { success: true, data: null }
+      }
+      console.error('Error fetching curfew settings:', error)
+      return { success: false, error: error.message }
+    }
+
+    // Transform the data to match the expected format for the UI
+    const transformedSettings = settings ? {
+      start_time: settings.start_time,
+      end_time: settings.end_time,
+      days_of_week: settings.days_of_week,
+      active: settings.active,
+      grace_period_minutes: settings.grace_period_minutes,
+      notification_advance_minutes: settings.notification_advance_minutes,
+      updated_at: settings.updated_at,
+    } : null
+
+    return { success: true, data: transformedSettings }
+  } catch (error) {
+    console.error('Error in getCurfewSettings:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch curfew settings',
     }
   }
 }
