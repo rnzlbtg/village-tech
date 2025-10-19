@@ -1,570 +1,544 @@
-# Developer Quickstart: Sentinel App Mobile
+# Quick Start Guide: Sentinel App - Gate Guard Access Control
 
-**Feature**: Sentinel App - Gate Guard Access Control
-**Platform**: Flutter 3.24+ (iOS 14+ | Android 8.0+)
-**Date**: 2025-10-10
-
----
-
-## 🎯 Overview
-
-The Sentinel App is a Flutter mobile application for gate guards to manage entry of residents, guests, deliveries, and construction workers. It features RFID verification, offline-first architecture, and real-time sync with Supabase backend.
-
-**Key Capabilities**:
-- ✅ RFID sticker scanning for resident vehicles (FR-001 to FR-005)
-- ✅ Pre-registered guest validation (FR-006 to FR-011)
-- ✅ Delivery logging with timers (FR-012 to FR-018)
-- ✅ Construction permit verification (FR-019 to FR-025)
-- ✅ Incident reporting (FR-026 to FR-029)
-- ✅ Village rules & announcements (FR-030 to FR-033)
+**Version**: 1.0.0
+**Date**: 2025-10-19
+**Target Audience**: Developers implementing the Sentinel mobile application
 
 ---
 
-## 📋 Prerequisites
+## Overview
 
-### Required Tools
-- **Flutter SDK**: 3.24.0 or higher
-- **Dart**: 3.0 or higher
-- **Android Studio** or **Xcode** (for platform builds)
-- **VS Code** or **Android Studio** (recommended IDE)
-- **Git**: For version control
+The Sentinel app is a Flutter-based mobile application for gate guards to manage access control in residential communities. This guide provides everything needed to set up, configure, and run the application locally.
 
-### Backend Setup
-- **Supabase Project**: Access to Village Tech v4 Supabase instance
-- **Environment Variables**: `.env` file with Supabase credentials
+### Key Features
 
-### Hardware (for RFID testing)
-- iOS device with NFC capability (iPhone 7+) OR
-- Android device with NFC capability (Android 8.0+)
-- RFID test stickers (13.56 MHz NFC tags)
+- **RFID Verification**: Scan and validate vehicle RFID stickers
+- **Guest Management**: Pre-register and verify guest entries
+- **Delivery Tracking**: Log and monitor delivery operations
+- **Construction Access**: Verify construction permits and worker authorization
+- **Incident Reporting**: Document security incidents and rule violations
+- **Offline Capability**: Full offline operation with automatic sync
+- **Real-time Updates**: Live synchronization with backend services
 
 ---
 
-## 🚀 Quick Start (5 minutes)
+## Prerequisites
 
-### 1. Clone the Repository
+### Development Environment
+
 ```bash
+# Required Software
+- Flutter SDK 3.24+
+- Dart 3.0+
+- Android Studio / VS Code
+- Android SDK (Android development)
+- Xcode (iOS development - macOS only)
+- Git
+
+# Optional but Recommended
+- Android device or emulator for testing
+- iOS device or simulator for testing
+- Postman or similar API testing tool
+```
+
+### Platform Setup
+
+#### Flutter Installation
+```bash
+# Install Flutter (if not already installed)
+# Visit: https://docs.flutter.dev/get-started/install
+
+# Verify installation
+flutter doctor
+```
+
+#### Android Development
+```bash
+# Install Android Studio
+# Configure Android SDK
+# Enable developer options on test device
+# Install USB drivers (if using physical device)
+```
+
+#### iOS Development (macOS only)
+```bash
+# Install Xcode from App Store
+# Install Xcode Command Line Tools
+xcode-select --install
+
+# Install CocoaPods
+sudo gem install cocoapods
+```
+
+---
+
+## Project Setup
+
+### 1. Clone Repository
+
+```bash
+# Clone the repository
 git clone https://github.com/your-org/village-tech-v4.git
 cd village-tech-v4
+
+# Switch to the Sentinel app branch
 git checkout 004-sentinel-app-mobile
 ```
 
-### 2. Navigate to Sentinel App
+### 2. Dependencies Installation
+
 ```bash
+# Navigate to Sentinel app directory
 cd apps/sentinel
-```
 
-### 3. Install Dependencies
-```bash
+# Install Flutter dependencies
 flutter pub get
+
+# Install iOS dependencies (macOS only)
+cd ios && pod install && cd ..
 ```
 
-### 4. Configure Environment
-Create `.env` file in `apps/sentinel/`:
+### 3. Environment Configuration
+
+Create environment configuration files:
+
+```bash
+# Create environment files
+touch .env.local
+touch .env.development
+touch .env.production
+```
+
+#### Environment Variables (.env.local)
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Environment
-ENVIRONMENT=development
+# App Configuration
+FLUTTER_ENV=development
+APP_NAME=Sentinel Dev
+APP_VERSION=1.0.0
+
+# API Configuration
+API_BASE_URL=https://dev-api.villagetech.com/v1
+API_TIMEOUT=30000
+
+# Logging
+LOG_LEVEL=debug
+ENABLE_CRASHLYTICS=false
 
 # Feature Flags
-ENABLE_RFID=true
+ENABLE_BIOMETRIC_AUTH=true
 ENABLE_OFFLINE_MODE=true
+ENABLE_PUSH_NOTIFICATIONS=true
 ```
 
-### 5. Run the App
+### 4. Configuration Files
+
+Update app configuration files:
+
+#### `lib/utils/constants.dart`
+```dart
+class Environment {
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  static bool get isDevelopment =>
+    String.fromEnvironment('FLUTTER_ENV') == 'development';
+
+  static bool get isProduction =>
+    String.fromEnvironment('FLUTTER_ENV') == 'production';
+}
+```
+
+#### `android/app/src/main/AndroidManifest.xml`
+```xml
+<!-- Add required permissions -->
+<uses-permission android:name="android.permission.NFC" />
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.BLUETOOTH" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+```
+
+#### `ios/Runner/Info.plist`
+```xml
+<!-- Add iOS permissions -->
+<key>NSNFCUsageDescription</key>
+<string>This app uses NFC to scan RFID stickers for vehicle verification</string>
+<key>NSCameraUsageDescription</key>
+<string>This app uses camera to take photos for incident reports</string>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>This app uses location for gate security verification</string>
+```
+
+---
+
+## Running the Application
+
+### 1. Development Server
+
 ```bash
-# For iOS
-flutter run -d ios
+# Start Flutter development server
+flutter run
 
-# For Android
-flutter run -d android
-
-# For Web (limited features)
-flutter run -d chrome
+# Or run on specific device
+flutter run -d chrome          # Web development
+flutter run -d android         # Android device/emulator
+flutter run -d ios             # iOS device/simulator (macOS only)
 ```
 
----
+### 2. Hot Reload & Hot Restart
 
-## 🏗️ Project Structure
-
-```
-apps/sentinel/
-├── lib/
-│   ├── main.dart                    # App entry point
-│   ├── app.dart                     # App configuration
-│   │
-│   ├── core/                        # Core infrastructure
-│   │   ├── auth/
-│   │   │   ├── auth_provider.dart   # Supabase auth integration
-│   │   │   └── guard_session.dart   # Guard session management
-│   │   ├── storage/
-│   │   │   ├── local_db.dart        # Drift database setup
-│   │   │   └── encryption.dart      # SQLCipher encryption
-│   │   ├── sync/
-│   │   │   ├── sync_service.dart    # Background sync orchestrator
-│   │   │   └── sync_queue.dart      # Offline queue management
-│   │   ├── rfid/
-│   │   │   └── nfc_manager.dart     # NFC/RFID integration
-│   │   └── navigation/
-│   │       └── app_router.dart      # GoRouter configuration
-│   │
-│   ├── features/                    # Feature modules (Clean Architecture)
-│   │   ├── rfid_verification/
-│   │   │   ├── presentation/
-│   │   │   │   ├── screens/
-│   │   │   │   │   └── rfid_scan_screen.dart
-│   │   │   │   ├── widgets/
-│   │   │   │   │   └── sticker_result_card.dart
-│   │   │   │   └── providers/
-│   │   │   │       └── rfid_provider.dart
-│   │   │   ├── domain/
-│   │   │   │   ├── entities/
-│   │   │   │   │   └── rfid_sticker.dart
-│   │   │   │   ├── usecases/
-│   │   │   │   │   └── validate_rfid_usecase.dart
-│   │   │   │   └── repositories/
-│   │   │   │       └── rfid_repository.dart (interface)
-│   │   │   └── data/
-│   │   │       ├── repositories/
-│   │   │       │   └── rfid_repository_impl.dart
-│   │   │       ├── datasources/
-│   │   │       │   ├── rfid_remote_datasource.dart
-│   │   │       │   └── rfid_local_datasource.dart
-│   │   │       └── models/
-│   │   │           └── rfid_sticker_model.dart
-│   │   │
-│   │   ├── guest_management/        # Similar structure
-│   │   ├── delivery_tracking/       # Similar structure
-│   │   ├── construction_permits/    # Similar structure
-│   │   ├── incident_reporting/      # Similar structure
-│   │   └── village_info/            # Similar structure
-│   │
-│   └── shared/
-│       ├── widgets/                 # Reusable UI components
-│       │   ├── custom_button.dart
-│       │   ├── loading_indicator.dart
-│       │   └── error_display.dart
-│       ├── theme/
-│       │   ├── app_theme.dart       # Material 3 theme
-│       │   ├── app_colors.dart      # Design tokens
-│       │   └── app_text_styles.dart
-│       └── utils/
-│           ├── validators.dart
-│           ├── formatters.dart
-│           └── constants.dart
-│
-├── test/                            # Tests
-│   ├── unit/
-│   ├── widget/
-│   ├── integration/
-│   └── mocks/
-│
-├── android/                         # Android platform code
-├── ios/                             # iOS platform code
-├── pubspec.yaml                     # Dependencies
-└── analysis_options.yaml            # Linting rules
-```
-
----
-
-## 📦 Key Dependencies
-
-### Core Dependencies
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-
-  # Supabase Backend
-  supabase_flutter: ^2.5.0          # Supabase client
-
-  # State Management
-  flutter_riverpod: ^2.4.9          # State management
-
-  # Navigation
-  go_router: ^14.0.0                # Declarative routing
-
-  # Local Storage & Encryption
-  drift: ^2.14.0                    # Type-safe SQLite
-  drift_sqflite: ^2.0.0             # SQLite backend
-  sqlcipher_flutter_libs: ^0.6.1   # Database encryption
-  flutter_secure_storage: ^9.0.0    # Secure key storage
-
-  # RFID/NFC
-  nfc_manager: ^3.3.0               # NFC tag reading
-
-  # Background Services
-  workmanager: ^0.5.2               # Periodic sync tasks
-  connectivity_plus: ^5.0.0         # Network monitoring
-
-  # Push Notifications
-  firebase_core: ^3.6.0
-  firebase_messaging: ^15.1.3
-  flutter_local_notifications: ^17.2.3
-
-  # Utilities
-  envied: ^0.5.0                    # Environment variables
-  logger: ^2.0.0                    # Logging
-  intl: ^0.19.0                     # Internationalization
-```
-
-### Dev Dependencies
-```yaml
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^4.0.0
-  very_good_analysis: ^6.0.0        # Strict linting rules
-  mockito: ^5.4.0                   # Mocking for tests
-  build_runner: ^2.4.0              # Code generation
-  drift_dev: ^2.14.0                # Drift code gen
-  envied_generator: ^0.5.0          # .env code gen
-```
-
----
-
-## 🔑 Key Workflows
-
-### 1. RFID Verification Flow
-
-```dart
-// lib/features/rfid_verification/presentation/screens/rfid_scan_screen.dart
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nfc_manager/nfc_manager.dart';
-
-class RfidScanScreen extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final rfidState = ref.watch(rfidProvider);
-
-    return Scaffold(
-      appBar: AppBar(title: Text('RFID Verification')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => _startNfcScan(ref),
-          child: Text('Scan RFID Sticker'),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _startNfcScan(WidgetRef ref) async {
-    bool isAvailable = await NfcManager.instance.isAvailable();
-    if (!isAvailable) {
-      // Handle NFC not available
-      return;
-    }
-
-    NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-      // Extract sticker code from NFC tag
-      final stickerCode = extractStickerCode(tag);
-
-      // Validate via provider
-      await ref.read(rfidProvider.notifier).validateSticker(stickerCode);
-
-      NfcManager.instance.stopSession();
-    });
-  }
-}
-```
-
-### 2. Offline Sync Flow
-
-```dart
-// lib/core/sync/sync_service.dart
-
-import 'package:workmanager/workmanager.dart';
-
-class SyncService {
-  static const syncTaskName = 'sentinel_sync';
-
-  static void initialize() {
-    Workmanager().initialize(callbackDispatcher);
-
-    // Register periodic sync (every 15 minutes)
-    Workmanager().registerPeriodicTask(
-      'periodic_sync',
-      syncTaskName,
-      frequency: Duration(minutes: 15),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-        requiresBatteryNotLow: true,
-      ),
-    );
-  }
-
-  static Future<void> callbackDispatcher() async {
-    Workmanager().executeTask((task, inputData) async {
-      // Process sync queue
-      final syncQueue = SyncQueue();
-      await syncQueue.processPendingItems();
-      return true;
-    });
-  }
-}
-```
-
-### 3. Database Encryption Setup
-
-```dart
-// lib/core/storage/local_db.dart
-
-import 'package:drift/drift.dart';
-import 'package:drift_sqflite/drift_sqflite.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-class LocalDatabase extends _$LocalDatabase {
-  LocalDatabase() : super(_openConnection());
-
-  static QueryExecutor _openConnection() async {
-    final secureStorage = FlutterSecureStorage();
-
-    // Get or generate encryption key
-    String? encryptionKey = await secureStorage.read(key: 'db_key');
-    if (encryptionKey == null) {
-      encryptionKey = generateSecureKey();
-      await secureStorage.write(key: 'db_key', value: encryptionKey);
-    }
-
-    final dbPath = await getDatabasePath();
-
-    return NativeDatabase.createInBackground(
-      File(dbPath),
-      setup: (db) {
-        db.execute('PRAGMA key = "$encryptionKey"');
-        db.execute('PRAGMA cipher_page_size = 4096');
-      },
-    );
-  }
-}
-```
-
----
-
-## 🧪 Testing
-
-### Run Tests
 ```bash
-# Run all tests
+# Hot reload (preserves app state)
+# Press 'r' in terminal or use IDE hot reload
+
+# Hot restart (resets app state)
+# Press 'R' in terminal or use IDE hot restart
+```
+
+### 3. Build for Testing
+
+```bash
+# Debug build
+flutter build apk --debug      # Android debug
+flutter build ios --debug      # iOS debug (macOS only)
+
+# Profile build (for performance testing)
+flutter build apk --profile    # Android profile
+flutter build ios --profile    # iOS profile (macOS only)
+```
+
+---
+
+## Authentication Setup
+
+### 1. Supabase Configuration
+
+Configure Supabase authentication:
+
+```sql
+-- Create guard_users table
+CREATE TABLE guard_users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  tenant_id UUID REFERENCES tenants(id) NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('head_guard', 'guard_officer', 'guard_trainee')),
+  phone TEXT,
+  employee_id TEXT,
+  is_active BOOLEAN DEFAULT true,
+  last_login_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE guard_users ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policy
+CREATE POLICY "Guards can view tenant data" ON guard_users
+  FOR ALL USING (tenant_id = auth.jwt() ->> 'tenant_id'::uuid);
+```
+
+### 2. Test Users
+
+Create test guard accounts:
+
+```sql
+-- Create test guard users
+INSERT INTO guard_users (email, full_name, role, tenant_id, employee_id) VALUES
+  ('head.guard@villagetech.com', 'John Smith', 'head_guard', 'tenant-uuid-1', 'G001'),
+  ('guard.officer@villagetech.com', 'Jane Doe', 'guard_officer', 'tenant-uuid-1', 'G002'),
+  ('guard.trainee@villagetech.com', 'Mike Johnson', 'guard_trainee', 'tenant-uuid-1', 'G003');
+```
+
+### 3. Test Authentication
+
+```dart
+// Test login credentials
+final testCredentials = {
+  'email': 'head.guard@villagetech.com',
+  'password': 'TempPassword123!',
+  'tenant_code': 'DEMO-VILLAGE',
+};
+```
+
+---
+
+## Core Features Testing
+
+### 1. RFID Verification
+
+```dart
+// Test RFID scanning
+Future<void> testRfidScanning() async {
+  try {
+    final nfcManager = NfcManagerService();
+    await nfcManager.startScanning();
+
+    nfcManager.scanResults.listen((result) {
+      if (result.success) {
+        print('RFID Code: ${result.rfidCode}');
+        // Verify sticker with backend
+        verifyRfidSticker(result.rfidCode);
+      }
+    });
+  } catch (e) {
+    print('RFID scanning error: $e');
+  }
+}
+```
+
+### 2. Guest Management
+
+```dart
+// Test guest registration
+Future<void> testGuestRegistration() async {
+  final guest = Guest(
+    guestName: 'John Visitor',
+    phoneNumber: '+1234567890',
+    householdId: 'household-uuid-1',
+    scheduledDate: DateTime.now(),
+    expectedArrival: const TimeOfDay(hour: 14, minute: 30),
+    purpose: 'Social visit',
+  );
+
+  final result = await guestService.registerGuest(guest);
+  print('Guest registered: ${result.success}');
+}
+```
+
+### 3. Offline Operation
+
+```dart
+// Test offline capability
+Future<void> testOfflineMode() async {
+  // Simulate network disconnection
+  await networkMonitor.simulateOffline();
+
+  // Create entry log offline
+  final entry = EntryLog(
+    entryType: 'guest',
+    personName: 'Test Visitor',
+    verificationMethod: 'manual',
+    destination: 'House 123',
+  );
+
+  final result = await entryService.createEntryLog(entry);
+  print('Offline entry created: ${result.success}');
+
+  // Verify it's queued for sync
+  final pendingSync = await syncService.getPendingOperations();
+  print('Pending sync operations: ${pendingSync.length}');
+}
+```
+
+---
+
+## Testing
+
+### 1. Unit Tests
+
+```bash
+# Run all unit tests
 flutter test
 
-# Run unit tests only
-flutter test test/unit
+# Run specific test file
+flutter test test/services/auth_service_test.dart
 
-# Run with coverage
+# Run tests with coverage
 flutter test --coverage
-flutter pub run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info --packages=.packages --report-on=lib
 ```
 
-### Widget Tests Example
-```dart
-// test/widget/rfid_scan_screen_test.dart
+### 2. Widget Tests
 
-import 'package:flutter_test/flutter_test.dart';
-
-void main() {
-  testWidgets('RFID scan screen displays scan button', (tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(home: RfidScanScreen()),
-      ),
-    );
-
-    expect(find.text('Scan RFID Sticker'), findsOneWidget);
-  });
-}
-```
-
-### Integration Tests
 ```bash
-# Run integration tests on device
-flutter test integration_test/app_test.dart
+# Run widget tests
+flutter test test/widgets/
+
+# Run specific widget test
+flutter test test/widgets/login_form_test.dart
 ```
+
+### 3. Integration Tests
+
+```bash
+# Run integration tests
+flutter test integration_test/
+
+# Run integration test on specific device
+flutter test integration_test/app_test.dart -d android
+```
+
+### 4. Manual Testing Checklist
+
+#### Authentication
+- [ ] Login with valid credentials
+- [ ] Login with invalid credentials
+- [ ] Biometric authentication
+- [ ] Session timeout
+- [ ] Token refresh
+
+#### RFID Scanning
+- [ ] Scan valid RFID sticker
+- [ ] Scan expired/invalid sticker
+- [ ] Handle NFC unavailability
+- [ ] Multiple scan attempts
+- [ ] Scan timeout handling
+
+#### Guest Management
+- [ ] Register new guest
+- [ ] Search existing guests
+- [ ] Check in guest
+- [ ] Check out guest
+- [ ] Cancel guest registration
+
+#### Offline Operation
+- [ ] Create entries offline
+- [ ] Sync queued operations
+- [ ] Handle sync conflicts
+- [ ] Network reconnection
+- [ ] Data consistency verification
 
 ---
 
-## 🔐 Security Best Practices
+## Troubleshooting
 
-### 1. Environment Variables
-- NEVER commit `.env` to git
-- Use `envied` package for compile-time environment injection
-- Rotate Supabase keys regularly
+### Common Issues
 
-### 2. Secure Storage
-- All encryption keys stored in `flutter_secure_storage`
-- Database encrypted with SQLCipher (AES-256)
-- Implement biometric authentication for sensitive operations
-
-### 3. RFID Security
-- Always validate sticker codes against backend
-- Never trust tag data alone
-- Implement tag authenticity checks
-- Log all verification attempts
-
-### 4. Network Security
-- Use HTTPS for all API calls (Supabase enforces this)
-- Implement certificate pinning for production
-- Validate JWT tokens on every request
-
----
-
-## 🚨 Troubleshooting
-
-### NFC Not Working
-**Issue**: NFC scanning fails on device
-**Solutions**:
-1. Check device has NFC hardware: `NfcManager.instance.isAvailable()`
-2. Ensure NFC is enabled in device settings
-3. For iOS: Verify NFC capability in Xcode entitlements
-4. For Android: Add NFC permission in AndroidManifest.xml
-
-### Background Sync Not Triggering
-**Issue**: Offline logs not syncing
-**Solutions**:
-1. Check battery optimization exemptions for app
-2. Verify WorkManager is initialized in `main.dart`
-3. Test with shorter intervals in development (min 15 min in production)
-4. Check network constraints are met
-
-### Database Encryption Error
-**Issue**: "SQLCipher error" on database open
-**Solutions**:
-1. Verify encryption key exists in secure storage
-2. Check SQLCipher libraries are properly linked (see platform-specific setup)
-3. Ensure PRAGMA key is set before any queries
-
-### Build Errors
-**Issue**: Build fails with dependency conflicts
-**Solutions**:
+#### 1. NFC Not Working
 ```bash
+# Check NFC permissions
+# Android: Settings > Apps > Sentinel > Permissions > NFC
+# iOS: Settings > Privacy & Security > NFC
+
+# Verify device NFC capability
+flutter pub run flutter_nfc_kit:check_nfc_availability
+```
+
+#### 2. Build Issues
+```bash
+# Clean and rebuild
 flutter clean
 flutter pub get
-flutter pub upgrade
-flutter pub run build_runner build --delete-conflicting-outputs
+flutter run
+
+# iOS specific
+cd ios && pod install && cd ..
 ```
 
----
-
-## 📱 Platform-Specific Setup
-
-### iOS Setup (Xcode)
-1. Enable NFC capability:
-   - Open `ios/Runner.xcworkspace` in Xcode
-   - Select Runner target → Signing & Capabilities
-   - Add "Near Field Communication Tag Reading"
-
-2. Update Info.plist:
-```xml
-<key>NFCReaderUsageDescription</key>
-<string>This app uses NFC to scan RFID stickers for vehicle verification</string>
-<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
-<array>
-  <string>A0000002471001</string>
-</array>
-```
-
-3. Background modes:
-   - Add "Background fetch" and "Remote notifications" capabilities
-
-### Android Setup
-1. Update AndroidManifest.xml:
-```xml
-<uses-permission android:name="android.permission.NFC" />
-<uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-<uses-feature android:name="android.hardware.nfc" android:required="false" />
-```
-
-2. Notification channels (for Android 8+):
-   - Configure in `main.dart` on app start
-
----
-
-## 🚢 Deployment
-
-### Build for Production
-
-#### iOS
+#### 3. Supabase Connection Issues
 ```bash
-# Build IPA
-flutter build ipa --release
+# Verify environment variables
+print('Supabase URL: ${Environment.supabaseUrl}');
+print('Supabase Key: ${Environment.supabaseAnonKey}');
 
-# Open in Xcode for App Store upload
-open build/ios/archive/Runner.xcarchive
+# Test connection
+final response = await supabase.from('tenants').select().limit(1);
+print('Connection test: ${response}');
 ```
 
-#### Android
+#### 4. Sync Issues
+```bash
+# Check sync status
+final syncStatus = await syncService.getSyncStatus();
+print('Sync status: ${syncStatus}');
+
+# Clear sync queue (development only)
+await syncService.clearSyncQueue();
+```
+
+### Debug Mode
+
+Enable debug logging:
+
+```dart
+// Enable debug logging
+Logger.level = Level.debug;
+
+// Monitor network requests
+HttpClient.logRequests = true;
+
+// Enable Flutter inspector
+flutter run --debug
+```
+
+---
+
+## Deployment
+
+### 1. Android Build
+
 ```bash
 # Build APK
 flutter build apk --release
 
 # Build App Bundle (recommended for Play Store)
 flutter build appbundle --release
+
+# Sign APK (if needed)
+jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+  -keystore keystore.jks build/app/outputs/flutter-apk/app-release.apk alias_name
 ```
 
-### CI/CD (GitHub Actions Example)
-```yaml
-# .github/workflows/sentinel-app.yml
-name: Sentinel App CI/CD
+### 2. iOS Build (macOS only)
 
-on:
-  push:
-    paths:
-      - 'apps/sentinel/**'
-      - 'packages/**'
+```bash
+# Build iOS app
+flutter build ios --release
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-      - run: cd apps/sentinel && flutter pub get
-      - run: cd apps/sentinel && flutter test
-      - run: cd apps/sentinel && flutter build apk --release
+# Open in Xcode for final build and archive
+open ios/Runner.xcworkspace
+```
+
+### 3. Web Build
+
+```bash
+# Build web app
+flutter build web --release
 ```
 
 ---
 
-## 📚 Additional Resources
+## Resources
 
 ### Documentation
-- [Feature Specification](./spec.md)
-- [Data Model](./data-model.md)
-- [API Contracts](./contracts/README.md)
-- [Research Findings](./research.md)
-
-### External Resources
 - [Flutter Documentation](https://docs.flutter.dev/)
-- [Supabase Flutter Guide](https://supabase.com/docs/guides/getting-started/tutorials/with-flutter)
-- [nfc_manager Package](https://pub.dev/packages/nfc_manager)
-- [Drift Documentation](https://drift.simonbinder.eu/)
+- [Supabase Flutter Docs](https://supabase.com/docs/guides/getting-started/flutter)
+- [Riverpod Documentation](https://riverpod.dev/)
+- [GoRouter Documentation](https://gorouter.dev/)
 
-### Team Contacts
-- **Backend Lead**: backend-team@villagetech.com
-- **Mobile Lead**: mobile-team@villagetech.com
-- **Security Team**: security@villagetech.com
+### Packages Used
+- `supabase_flutter` - Backend integration
+- `flutter_riverpod` - State management
+- `go_router` - Navigation
+- `drift` - Local database
+- `flutter_nfc_kit` - RFID scanning
+- `local_auth` - Biometric authentication
+- `connectivity_plus` - Network monitoring
+- `firebase_messaging` - Push notifications
+
+### Support
+- GitHub Issues: [Repository Issues](https://github.com/your-org/village-tech-v4/issues)
+- Development Team: dev-team@villagetech.com
+- Documentation: docs.villagetech.com
 
 ---
 
-## 🎯 Next Steps
+## Next Steps
 
-1. ✅ Complete Phase 0 research (DONE)
-2. ✅ Complete Phase 1 design artifacts (DONE)
-3. ⏳ Phase 2: Generate tasks.md via `/speckit.tasks` command
-4. ⏳ Phase 3: Implement RFID verification feature (Priority P1)
-5. ⏳ Phase 4: Implement guest management (Priority P1)
-6. ⏳ Phase 5: Implement delivery tracking (Priority P2)
+1. **Complete Setup**: Follow this guide to set up your development environment
+2. **Review Architecture**: Read the [data-model.md](data-model.md) for detailed entity relationships
+3. **API Reference**: Review [contracts/openapi.yaml](contracts/openapi.yaml) for API specifications
+4. **Start Development**: Begin implementing features following the clean architecture pattern
+5. **Testing**: Write comprehensive tests for all features
+6. **Code Review**: Submit pull requests for team review
 
----
-
-**Last Updated**: 2025-10-10
-**Version**: 1.0.0
-**Maintained By**: Village Tech v4 Mobile Team
+Happy coding! 🚀

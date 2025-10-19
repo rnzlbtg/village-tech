@@ -1,498 +1,318 @@
-# Research Findings: Sentinel App Mobile - Technical Implementation
+# Phase 0 Research: Sentinel App - Gate Guard Access Control
 
-**Date**: 2025-10-10
-**Feature**: Sentinel App - Gate Guard Access Control Mobile Application
-**Purpose**: Resolve technical unknowns and establish implementation patterns
+**Date**: 2025-10-19
+**Research Areas**: RFID/NFC Integration, Offline-First Architecture, Background Sync, Security Best Practices
 
----
+## Executive Summary
 
-## 1. RFID Hardware Integration for Flutter
-
-### Decision
-**Recommended Approach: Embedded NFC via `nfc_manager` package for standard NFC/RFID tags (13.56 MHz), with Platform Channels for specialized external RFID readers**
-
-### Rationale
-- Most modern smartphones have built-in NFC capabilities (13.56 MHz frequency), eliminating need for external hardware in many cases
-- The `nfc_manager` package is the most actively maintained and community-recommended solution as of 2025
-- External readers via Bluetooth/USB should only be used when dealing with UHF RFID or specialized frequency requirements
-- Embedded NFC provides better user experience and lower hardware costs
-
-### Implementation Pattern
-```
-1. For Standard NFC Tags (13.56 MHz):
-   - Use nfc_manager package for tag reading/writing
-   - Implement session-based scanning with automatic pooling
-   - Validate tag data against backend before granting access
-
-2. For External RFID Readers (UHF/Custom):
-   - Create Platform Channels (MethodChannel for operations, EventChannel for streams)
-   - Implement native code (Kotlin/Swift) interfacing with manufacturer SDK
-   - Bridge data to Flutter via JSON serialization
-```
-
-### Key Packages/Tools
-- **Primary: `nfc_manager` (latest stable version)**
-  - Cross-platform (iOS & Android)
-  - Active maintenance and community support
-  - Simple API for NDEF message reading/writing
-
-- **Alternative: `flutter_nfc_kit`**
-  - Supports Android, iOS, and Web (via WebUSB)
-  - Two operation modes: polling and event streaming
-  - More comprehensive tag format support (NFC-A/B/F/V, ISO-DEP, MIFARE, Felica)
-
-- **For External Readers:**
-  - `flutter_blue_plus` for BLE communication
-  - `flutter_bluetooth_serial` for classic Bluetooth (Android only)
-  - Platform Channels for manufacturer-specific SDKs (e.g., Zebra RFID SDK)
-
-### Alternatives Considered
-- **flutter_nfc_kit**: Rejected as primary due to less community adoption, though offers more advanced features
-- **Custom native implementation only**: Rejected due to higher development overhead
-- **External readers as primary solution**: Rejected due to cost and complexity; reserved for specialized requirements
-
-### Security/Performance Considerations
-
-**Security Best Practices:**
-- Always validate NFC tag data - never trust tag contents without backend verification
-- Implement tag authenticity checks to prevent spoofing/cloning attacks
-- Don't store sensitive data solely on tags - use tags as identifiers only
-- Request user permission before writing to tags
-- Implement timeout mechanisms for scanning sessions (3-5 seconds)
-- Use encrypted communication between app and backend for tag verification
-
-**RFID Security Landscape (2025):**
-- RFID cards without encryption are vulnerable to skimming attacks
-- Static, unencrypted data can be read by portable RFID readers
-- Modern smartphones can read poorly secured 13.56 MHz RFID cards
-- Implement challenge-response authentication where possible
-
-**Performance Notes:**
-- iOS NFC reader is more sensitive on front side of device
-- Most smartphones cannot read low-frequency RFID (125 kHz)
-- NFC scanning should have 3-5 second timeout for better UX
-- Background tag reading requires specific iOS configuration
-
-**Recommended Approach: Embedded NFC vs External Reader**
-- **Use Embedded NFC when:**
-  - Working with standard access cards (13.56 MHz)
-  - Cost optimization is important
-  - User experience is priority
-  - Target devices are modern smartphones (iPhone 7+, Android with NFC)
-
-- **Use External Reader when:**
-  - Dealing with UHF RFID (long-range reading required)
-  - Working with legacy 125 kHz cards
-  - Need simultaneous multi-tag reading
-  - Require industrial-grade reliability in harsh environments
+The Sentinel gate guard application requires enterprise-grade reliability with offline capability, secure authentication, and real-time data synchronization. Based on comprehensive research, the existing Flutter codebase provides an excellent foundation with Drift + SQLCipher, Supabase integration, and proper security practices. Key recommendations include upgrading to flutter_nfc_kit for Flutter 3.24+ compatibility and implementing enhanced conflict resolution patterns.
 
 ---
 
-## 2. Background Service Architecture for Offline Sync
+## 1. RFID/NFC Integration Research
 
-### Decision
-**Recommended Approach: Hybrid architecture using WorkManager for periodic sync + flutter_background_service for critical real-time tasks, with queue-based offline-first pattern**
+### Decision: flutter_nfc_kit + Embedded NFC Approach
 
-### Rationale
-- WorkManager provides reliable, battery-efficient periodic execution that survives app termination and device reboots
-- Android 14 and iOS 17 have stricter background execution rules requiring platform-native scheduling
-- Queue-based architecture decouples local operations from network sync, ensuring data integrity
-- Exponential backoff prevents battery drain from repeated failed sync attempts
+**Rationale**:
+- **Flutter 3.24+ Compatibility**: Current project's nfc_manager has compatibility issues with Flutter 3.24+
+- **Production-Ready**: flutter_nfc_kit is actively maintained and proven in security applications
+- **Cross-Platform**: Consistent behavior across iOS and Android devices
+- **Cost-Effective**: No additional hardware requirements using device-embedded NFC
 
-### Implementation Pattern
-```
-Offline-First Architecture Layers:
-
-1. Local Persistence Layer (Hive/Drift)
-   - Immediate write to local database
-   - Generate unique client IDs for all records
-   - Timestamp all operations
-
-2. Sync Queue Layer (SQLite table)
-   - Record sync events: {id, operation, entity, timestamp, retryCount, status}
-   - Support operation types: CREATE, UPDATE, DELETE
-   - Implement queue compaction (e.g., delete UPDATE if followed by DELETE)
-
-3. Background Sync Service (WorkManager)
-   - Periodic tasks: Minimum 15-minute intervals
-   - Constraints: NetworkType.CONNECTED, requiresBatteryNotLow
-   - Process queue in batches
-   - Implement exponential backoff: baseDelay * (2^retryCount) with jitter
-
-4. State Management Layer (BLoC/Riverpod)
-   - Optimistic UI updates
-   - Handle rollback on sync failure
-   - Real-time sync status notifications
+**Implementation**:
+```yaml
+dependencies:
+  flutter_nfc_kit: ^4.2.0  # Compatible with Flutter 3.24+
 ```
 
-### Key Packages/Tools
-- **Primary Packages:**
-  - `workmanager: ^0.5.2` - Periodic background tasks
-  - `flutter_background_service: ^5.0.0` - Continuous foreground services (use sparingly)
-  - `connectivity_plus: ^5.0.0` - Network status monitoring
-  - `hive: ^2.2.3` or `drift: ^2.14.0` - Local persistence
-  - `flutter_bloc: ^8.1.3` or `riverpod: ^2.4.9` - State management
+**Performance**: <5 second verification times achievable with proper scan optimization and user guidance.
 
-- **Specialized Packages:**
-  - `flutter_network_watcher` - Advanced retry with exponential backoff and jitter
-  - `offline_sync_kit` - Automatic reconnection with conflict resolution
+### Hardware Integration Strategy
 
-### Alternatives Considered
-- **flutter_background_service only**: Rejected due to battery concerns; Android 14+ restricts background services
-- **Manual timer-based sync**: Rejected due to unreliability and battery drain
-- **Real-time sync only (no queue)**: Rejected due to data loss risk in poor connectivity
-- **Firebase Realtime Database sync**: Rejected due to offline-first requirement and vendor lock-in
+**Recommended**: Embedded device NFC (13.56 MHz)
+- No additional hardware costs
+- Weather-resistant device protection
+- Simplified deployment and maintenance
+- Better battery management
 
-### Security/Performance Considerations
+**Use External Readers Only When**:
+- UHF RFID required (>10cm reading distance)
+- Vehicle-mounted readers needed
+- Harsh environments requiring specialized equipment
 
-**Battery Optimization:**
-- WorkManager respects Doze mode and App Standby automatically
-- Minimum 15-minute periodic interval prevents excessive wake-ups
-- Constraints ensure tasks run during optimal conditions (charging, Wi-Fi)
-- Foreground services require persistent notification and should only be used for critical tasks
+### Security Considerations
 
-**Handling Platform Restrictions:**
-- **Android 14:** Force-quit apps won't receive background tasks until manually reopened
-- **iOS 17:** Apps swiped from app switcher must be reopened for background tasks
-- **Solution:** Educate users about battery optimization exemptions for critical apps
+**Data Protection**:
+- ✅ Backend validation of all RFID tag data
+- ✅ AES-256 encrypted local storage (already implemented)
+- ✅ HTTPS/TLS transmission with Supabase
+- ✅ Row-Level Security (RLS) for tenant isolation
 
-**Sync Queue Best Practices:**
-- Implement dead letter queue for permanently failed items (after max retries)
-- Use priority-based processing for time-sensitive operations
-- Enable queue persistence across app sessions
-- Implement jitter (10% randomization) in retry delays to prevent thundering herd
-
-**Conflict Resolution Strategies:**
-1. **Last-Write-Wins (LWW)** - Simplest, based on timestamps
-2. **Merge Strategy** - Combine changes with business logic rules
-3. **User-Driven Resolution** - Present conflicts to user for manual resolution
-4. **CRDTs** - Conflict-free Replicated Data Types for deterministic convergence (advanced)
-
-**Exponential Backoff Implementation:**
-```dart
-final baseDelay = Duration(seconds: 2);
-final maxDelay = Duration(seconds: 60);
-final jitterPercent = 0.1;
-
-final delay = min(baseDelay * pow(2, retryCount), maxDelay);
-final jitter = delay * (Random().nextDouble() * jitterPercent);
-final finalDelay = delay + jitter;
-```
+**Anti-Cloning Measures**:
+- Challenge-response authentication
+- Rate limiting for scan attempts
+- Backend validation with security policies
+- Audit logging of all RFID verification attempts
 
 ---
 
-## 3. Offline Data Encryption Strategy
+## 2. Offline-First Architecture Research
 
-### Decision
-**Recommended Approach: Drift with SQLCipher encryption for structured data + flutter_secure_storage for encryption keys, using AES-256 encryption**
+### Decision: Drift + SQLCipher (Current Implementation - Confirmed Optimal)
 
-### Rationale
-- Drift provides SQL capabilities with compile-time type safety and robust migration support
-- SQLCipher offers 256-bit AES encryption with zero configuration overhead
-- flutter_secure_storage leverages hardware-backed keystores (Android KeyStore, iOS Keychain)
-- Separation of data encryption from key storage follows security best practices
-- This combination is production-proven and actively maintained in 2025
+**Rationale**:
+- **Type Safety**: Compile-time query validation
+- **Encryption**: Built-in SQLCipher with AES-256 encryption
+- **Performance**: Complex queries with proper indexing
+- **Cross-Platform**: Consistent behavior across iOS/Android
 
-### Implementation Pattern
-```
-Layered Encryption Architecture:
+**Current Implementation Strengths**:
+- ✅ Proper tenant isolation with RLS
+- ✅ Encrypted local database
+- ✅ Sync queue management
+- ✅ Background service integration
 
-1. Key Management Layer
-   - Generate encryption key on first launch using Dart's crypto libraries
-   - Store key in flutter_secure_storage (uses Keychain/KeyStore)
-   - Optional: Implement key rotation strategy
+### Data Flow Patterns
 
-2. Database Encryption Layer
-   - Use Drift with drift_sqflite and sqlcipher_flutter_libs
-   - Pass encryption key from secure storage on database open
-   - All data encrypted at rest automatically
-
-3. Sensitive Field Encryption (Optional)
-   - Double-encrypt PII fields using AES-256
-   - Store encrypted blobs in database
-   - Decrypt only when needed for display
-
-4. Secure Deletion
-   - Implement secure key deletion on logout
-   - Overwrite sensitive data before deletion
-   - Clear in-memory caches
-```
-
-### Key Packages/Tools
-- **Primary Stack:**
-  - `drift: ^2.14.0` - Type-safe SQL database with migration support
-  - `drift_sqflite: ^2.0.0` - SQLite backend for Drift
-  - `sqlcipher_flutter_libs: ^0.6.1` - SQLCipher encryption for SQLite
-  - `flutter_secure_storage: ^9.0.0` - Secure key storage
-
-- **Alternative Options:**
-  - **Hive Encrypted Boxes:**
-    - `hive: ^2.2.3`
-    - Built-in AES-256 encryption via `HiveAesCipher`
-    - Simpler API but less suitable for complex queries
-
-  - **Plain sqflite with sqflite_sqlcipher:**
-    - `sqflite_sqlcipher: ^3.1.0`
-    - Drop-in replacement for sqflite
-    - Good for existing sqflite projects
-
-### Alternatives Considered
-- **Hive encrypted boxes**: Suitable for simple key-value storage, but Drift chosen for complex queries and type safety
-- **Manual AES encryption per field**: Too much overhead and error-prone
-- **Server-side encryption only**: Rejected due to offline-first requirement
-- **Device encryption only**: Insufficient for sensitive access control logs
-
-### Security/Performance Considerations
-
-**Key Management (Critical):**
-- NEVER hardcode encryption keys in source code
-- Generate cryptographically secure random keys (32 bytes for AES-256)
-- Store keys exclusively in flutter_secure_storage
-- Consider implementing key rotation for long-lived apps
-- Implement secure key deletion on logout/uninstall
-
-**Drift with SQLCipher Pattern:**
+**Optimistic UI Updates**:
 ```dart
-final encryptionKey = await secureStorage.read(key: 'dbKey');
-final executor = NativeDatabase.createInBackground(
-  File(dbPath),
-  setup: (db) => db.execute('PRAGMA key = "$encryptionKey"'),
-);
-```
-
-**Security Vulnerabilities & Mitigations:**
-- **Runtime Attacks:** Encrypted data can still be accessed on rooted/jailbroken devices. Mitigation: Implement root/jailbreak detection, use obfuscation
-- **Padding Oracle Attacks:** Current flutter_secure_storage has theoretical vulnerability. Mitigation: Keep packages updated, monitor security advisories
-- **Key Storage Limitations:** Hardware keystores not immune to runtime attacks. Mitigation: Implement app-level authentication (biometrics, PIN)
-
-**Performance Considerations:**
-- SQLCipher adds ~5-15% performance overhead for read/write operations
-- Hive encryption overhead is minimal (<5%)
-- Decrypt only what's needed - avoid loading entire encrypted datasets
-- Use indexed queries to minimize decryption operations
-- Consider caching decrypted data in-memory for frequently accessed records (with proper lifecycle management)
-
-**Biometric Authentication Integration:**
-```dart
-final authenticated = await localAuth.authenticate(
-  localizedReason: 'Authenticate to access secure data'
-);
-if (authenticated) {
-  final key = await secureStorage.read(key: 'encryptionKey');
-}
-```
-
----
-
-## 4. FCM Integration for Real-time Notifications
-
-### Decision
-**Recommended Approach: Firebase Cloud Messaging with firebase_messaging package, implementing both notification messages for user alerts and data messages for silent sync triggers**
-
-### Rationale
-- FCM is the industry standard for cross-platform push notifications as of 2025
-- Native integration with iOS APNs and Android FCM ensures reliable delivery
-- Supports both foreground notifications and background data sync triggers
-- firebase_messaging package is officially maintained and follows latest platform guidelines
-- Silent push enables efficient offline sync without user interruption
-
-### Implementation Pattern
-```
-FCM Architecture:
-
-1. Initialization & Permission Flow
-   iOS/macOS/Web:
-   - Request permission via requestPermission()
-   - Handle authorization/denied states
-   - Note: Permission cannot be re-requested if denied (Apple policy)
-
-   Android:
-   - Permissions granted automatically (no user prompt)
-   - Configure notification channels for Android 8+
-
-2. Message Types
-   a) Notification Messages (User-visible)
-      - Display notifications when app is background/terminated
-      - Blocked when app is foreground (handled manually)
-      - Use flutter_local_notifications for foreground display
-
-   b) Data-Only Messages (Silent sync)
-      - Set priority: "high" (Android) or content-available: 1 (iOS)
-      - Trigger background sync on receive
-      - Do not display notification
-
-3. Background Message Handling
-   - Define top-level function for background handler
-   - Register with FirebaseMessaging.onBackgroundMessage()
-   - Must complete quickly (<30s Android, <30s iOS)
-   - Use for triggering sync, not performing it
-
-4. Token Management
-   - Retrieve FCM token on app start
-   - Store token in backend for targeted messaging
-   - Listen to token refresh events
-   - Update backend when token changes
-```
-
-### Key Packages/Tools
-- **Primary Packages (2025 versions):**
-  - `firebase_core: ^3.6.0` - Firebase initialization
-  - `firebase_messaging: ^15.1.3` - FCM functionality
-  - `flutter_local_notifications: ^17.2.3` - Foreground notification display
-
-- **Supporting Packages:**
-  - `permission_handler: ^11.0.0` - Manage notification permissions
-  - `flutter_app_badger: ^1.5.0` - Badge count management
-
-### Alternatives Considered
-- **OneSignal**: Rejected due to preference for first-party Firebase integration
-- **AWS SNS**: Rejected due to additional complexity and cost
-- **Custom WebSocket solution**: Rejected due to battery drain and implementation complexity
-- **Pusher/PubNub**: Rejected due to cost and vendor lock-in
-
-### Security/Performance Considerations
-
-**iOS Permission Implementation:**
-```dart
-final settings = await FirebaseMessaging.instance.requestPermission(
-  alert: true,
-  badge: true,
-  sound: true,
-);
-
-// CRITICAL: Once denied, cannot re-request - direct user to Settings
-if (settings.authorizationStatus == AuthorizationStatus.denied) {
-  // Guide user to Settings
-}
-```
-
-**Background Handler Implementation:**
-```dart
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-
-  // Trigger sync or process data
-  // Do NOT perform long-running operations here
-  // Queue sync task instead
-
-  if (message.data.containsKey('sync_trigger')) {
-    await SyncQueue.instance.triggerSync();
+// Update local UI immediately, then sync
+Future<void> logEntry(EntryLog entry) async {
+  await _database.insertEntryLog(entry);        // 1. Local update
+  await _syncQueue.addOperation(entry);         // 2. Queue for sync
+  if (_networkMonitor.isConnected) {
+    await _syncService.syncPendingEntries();   // 3. Immediate sync if online
   }
 }
 ```
 
-**Silent Push for Data Sync:**
-```json
-{
-  "to": "DEVICE_FCM_TOKEN",
-  "priority": "high",
-  "content_available": true,
-  "data": {
-    "sync_trigger": "true",
-    "sync_type": "incremental",
-    "timestamp": "2025-10-10T10:30:00Z"
+**Cache Invalidation**:
+- Time-based invalidation (1-hour cache timeout)
+- Event-driven invalidation via Supabase realtime
+- Network-aware data fetching strategies
+
+### Supabase Integration Patterns
+
+**Realtime Subscriptions**:
+```dart
+supabase.from('announcements').on(SupabaseEventTypes.insert)
+  .subscribe((payload) {
+    _cacheManager.invalidate('announcements');
+    _database.insertAnnouncement(payload.newRecord);
+  });
+```
+
+**Auth Token Management**:
+- Secure token storage with flutter_secure_storage
+- Automatic refresh with retry logic
+- Offline capability with cached tokens
+
+---
+
+## 3. Background Sync & Conflict Resolution Research
+
+### Decision: Hybrid Background Service + WorkManager
+
+**Rationale**:
+- **flutter_background_service**: Critical operations, immediate sync
+- **WorkManager**: Periodic tasks, batch processing (Android)
+- **Silent Push Notifications**: iOS background triggers
+
+### Conflict Resolution Strategy
+
+**Critical Security Data**: Manual Resolution Required
+- Entry verification status changes
+- Incident report severity modifications
+- Access permission changes
+
+**Operational Data**: Last-Write-Wins with Timestamps
+- Entry log notes
+- Delivery status updates
+- Construction worker check-ins
+
+**Reference Data**: Server-Authoritative
+- Village rules and announcements
+- RFID sticker registry
+- Pre-registered guest information
+
+### Data Integrity Framework
+
+**Transactional Operations**:
+```dart
+Future<void> syncWithTransaction(EntryLog entry) async {
+  final transaction = await database.beginTransaction();
+  try {
+    await database.insertEntryLog(entry);
+    await syncQueue.addCriticalOperation(entry);
+    await updateRelatedEntities(entry);
+    await transaction.commit();
+    await syncService.syncCriticalData();
+  } catch (e) {
+    await transaction.rollback();
+    throw SyncTransactionException('Failed to sync: $e');
   }
 }
 ```
 
-**Data-Only Message Priority (Critical):**
-- **Android:** Set `"priority": "high"` in payload, otherwise message ignored when app is background/terminated
-- **iOS:** Set `"content_available": true` or `"content-available": 1`
-- Low priority data messages will be dropped by OS when app is not active
-
-**Message State Handling:**
-
-| App State | Notification Message | Data Message |
-|-----------|---------------------|--------------|
-| Foreground | onMessage (must handle manually) | onMessage |
-| Background | System tray (automatic) | onBackgroundMessage |
-| Terminated | System tray (automatic) | onBackgroundMessage |
-
-**Token Management Best Practices:**
-```dart
-// Get initial token
-final token = await FirebaseMessaging.instance.getToken();
-await sendTokenToBackend(token);
-
-// Listen for token refresh
-FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-  sendTokenToBackend(newToken);
-});
-
-// Delete token on logout
-await FirebaseMessaging.instance.deleteToken();
-```
-
-**Security Considerations:**
-1. FCM tokens should be transmitted securely (HTTPS)
-2. Implement token validation on backend
-3. Never include sensitive data in notification payload
-4. Use notification as trigger, fetch actual data securely
-5. Implement rate limiting on backend to prevent spam
-
-**Performance & Battery Optimization:**
-- Background handlers must complete within 30 seconds
-- Use data messages to trigger WorkManager tasks, not perform sync directly
-- Batch notifications when appropriate to reduce wake-ups
-- Test on real iOS devices (simulators don't support push notifications)
+**Entry Log Protection**:
+- Multiple storage strategies (local, backup file, cloud)
+- Priority-based sync queues
+- Alternative sync methods for emergencies
+- Comprehensive monitoring and alerts
 
 ---
 
-## Summary & Recommendations
+## 4. Security Best Practices Research
 
-### Recommended Technology Stack
+### Decision: Multi-Layer Security with Biometric Authentication
 
-**Core Flutter Packages:**
-- **NFC/RFID:** `nfc_manager` (primary), Platform Channels for external readers
-- **Offline Sync:** `workmanager` + `connectivity_plus`
-- **Local Storage:** `drift` + `sqlcipher_flutter_libs`
-- **Encryption:** `flutter_secure_storage` for key management
-- **Push Notifications:** `firebase_messaging` + `flutter_local_notifications`
-- **State Management:** `riverpod` (as specified in Technical Context)
+**Rationale**: Gate security applications require the highest security standards while maintaining operational reliability.
 
-### Implementation Priority
+### Authentication & Session Management
 
-**Phase 1 - Foundation:**
-1. Set up Drift database with SQLCipher encryption
-2. Implement flutter_secure_storage for key management
-3. Create basic offline-first architecture with sync queue
+**Biometric Integration**:
+- local_auth package with fingerprint/face recognition
+- Fallback PIN authentication
+- Auto-logout on app backgrounding (30-60 seconds)
+- Progressive lockout policies (3/5/7 failed attempts)
 
-**Phase 2 - Hardware Integration:**
-4. Integrate NFC reading via nfc_manager
-5. Implement RFID data validation and security checks
-6. Set up FCM for push notifications
+**Session Security**:
+- Short-lived access tokens (15-30 minutes)
+- Secure refresh token rotation
+- Session timeout after 8-12 hours maximum
+- Force re-authentication after device reboot
 
-**Phase 3 - Background Services:**
-7. Configure WorkManager for periodic sync
-8. Implement exponential backoff retry logic
-9. Add conflict resolution strategies
+### Data Protection
 
-**Phase 4 - Optimization:**
-10. Fine-tune battery optimization settings
-11. Implement comprehensive error handling
-12. Add monitoring and analytics
+**Encryption Strategy**:
+- AES-256 database encryption (already implemented)
+- Hardware-backed key storage (Keychain/KeyStore)
+- Secure key rotation every 30-90 days
+- Zero-out sensitive data from memory after use
 
-### Critical Success Factors
+**Device Security**:
+- Root/jailbreak detection with warning mode
+- Certificate pinning for API endpoints
+- Remote wipe capability for lost devices
+- Secure deletion of sensitive data
 
-1. **Security First:** Never compromise on encryption and data validation
-2. **Test on Real Devices:** Especially for NFC, background services, and FCM
-3. **Handle Platform Differences:** iOS and Android have different constraints
-4. **Plan for Offline:** Queue-based sync is essential for gate guard reliability
-5. **Battery Awareness:** Background tasks must be efficient and respectful of battery life
-6. **User Education:** Inform users about battery optimization exemptions if needed
+### Access Control
 
-### Known Limitations & Mitigations
+**Role-Based Permissions**:
+- head_guard: Full administrative access
+- guard_officer: Limited operational access
+- guard_trainee: Supervised access only
 
-| Limitation | Platform | Mitigation |
-|-----------|----------|------------|
-| NFC requires manual app open after swipe away | iOS | User education, persistent notification |
-| Background tasks stop after force-quit | Android 14 | Require battery optimization exemption |
-| 15-minute minimum periodic sync | Android | Use FCM silent push for urgent sync |
-| Low-frequency RFID not supported | Both | Use external reader via Bluetooth |
-| FCM permission cannot be re-requested | iOS | Guide users to Settings, use provisional auth |
+**Feature-Level Control**:
+- Dynamic feature loading based on permissions
+- Real-time permission revocation
+- Time-based access restrictions (shift management)
+- Comprehensive audit logging
+
+### Network Security
+
+**Secure Communication**:
+- TLS 1.3 enforcement
+- Certificate pinning with SHA-256 fingerprints
+- Request signing with HMAC
+- Protection against man-in-the-middle attacks
+
+**OWASP Mobile Top 10 Compliance**:
+- Proper credential usage and secure storage
+- Strong authentication and session management
+- Secure communication with certificate pinning
+- Adequate cryptography for sensitive data
 
 ---
 
-**Research Completed**: 2025-10-10
-**Next Phase**: Phase 1 - Design & Contracts (data-model.md, contracts/, quickstart.md)
+## 5. Technology Decisions Summary
+
+| Component | Decision | Rationale |
+|-----------|----------|-----------|
+| **NFC Library** | flutter_nfc_kit ^4.2.0 | Flutter 3.24+ compatibility, production-ready |
+| **Local Database** | Drift + SQLCipher (current) | Type safety, encryption, performance |
+| **Background Sync** | flutter_background_service + WorkManager | Hybrid approach for iOS/Android reliability |
+| **Authentication** | Biometric + PIN + MFA | Multi-layer security for critical operations |
+| **Security Storage** | flutter_secure_storage (current) | Hardware-backed secure storage |
+| **Network Security** | Certificate pinning + TLS 1.3 | Enterprise-grade security requirements |
+
+---
+
+## 6. Architecture Strengths in Current Implementation
+
+### ✅ Excellent Foundation
+- **Tenant Isolation**: Proper RLS implementation with tenant_id validation
+- **Encryption**: SQLCipher setup with secure key management
+- **Database Schema**: Well-structured with proper indexing
+- **Sync Queue**: Robust operation tracking and retry logic
+- **Authentication**: Secure JWT handling with refresh mechanisms
+
+### ✅ Security Compliance
+- **Data Protection**: AES-256 encryption for local storage
+- **Access Control**: Role-based permissions with backend validation
+- **Audit Trail**: Comprehensive logging for security events
+- **Network Security**: HTTPS/TLS with Supabase integration
+
+### ✅ Mobile Best Practices
+- **Clean Architecture**: Proper separation of concerns
+- **State Management**: Riverpod for predictable state updates
+- **Performance**: Optimized queries and lazy loading
+- **Accessibility**: WCAG 2.1 AA compliance considerations
+
+---
+
+## 7. Implementation Recommendations
+
+### Phase 1: Critical Updates (Immediate)
+1. **Upgrade NFC Library**: Replace nfc_manager with flutter_nfc_kit
+2. **Enhanced Error Handling**: Comprehensive error recovery for RFID scans
+3. **Performance Monitoring**: Add metrics for scan success rates and timing
+4. **Security Enhancements**: Implement biometric authentication
+
+### Phase 2: Enhanced Sync (Medium Priority)
+1. **Conflict Resolution**: Implement version-based optimistic locking
+2. **Priority Queues**: Multi-tier sync queue system
+3. **Data Validation**: Comprehensive validation framework
+4. **Offline Analytics**: Usage monitoring and optimization
+
+### Phase 3: Advanced Features (Long-term)
+1. **External Reader Support**: Platform channels for UHF readers
+2. **Guard Training**: Integrated training modules and scenarios
+3. **Emergency Procedures**: Alternative sync methods for critical failures
+4. **Advanced Monitoring**: Real-time dashboard for administrators
+
+---
+
+## 8. Risk Mitigation Strategies
+
+### Technical Risks
+- **Flutter Compatibility**: Regular updates and dependency management
+- **Hardware Failure**: Manual verification processes for RFID failures
+- **Network Issues**: Robust offline capability with sync queue
+- **Data Integrity**: Multiple storage strategies and validation
+
+### Operational Risks
+- **Guard Training**: Built-in training modules and clear UI guidance
+- **Device Loss**: Remote wipe capability and secure authentication
+- **Security Breaches**: Comprehensive audit trail and incident response
+- **Compliance**: Built-in reporting and compliance checks
+
+### Performance Risks
+- **Scan Times**: Optimized NFC parameters and user guidance
+- **Battery Life**: Efficient background processing and power management
+- **Storage Usage**: Data cleanup and compression strategies
+- **Network Usage**: WiFi-only sync options and data optimization
+
+---
+
+## Conclusion
+
+The Sentinel gate guard application has a solid architectural foundation with excellent security practices and offline capability. The research confirms that the current technology choices (Flutter + Drift + Supabase) are optimal for this use case.
+
+Key success factors for implementation:
+1. **Upgrade to flutter_nfc_kit** for Flutter 3.24+ compatibility
+2. **Implement biometric authentication** for enhanced security
+3. **Add conflict resolution** for enterprise-grade data integrity
+4. **Maintain offline-first approach** for reliable operations
+
+The recommended phased approach ensures critical functionality is delivered quickly while building toward a comprehensive, enterprise-grade solution for residential community security management.
