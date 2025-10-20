@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../models/guest.dart' hide TimeOfDay;
 import '../../providers/guest_provider.dart';
+import '../../services/household_contact_service.dart';
 import '../../shared/theme/app_theme.dart';
+import '../../widgets/shared/loading_indicator.dart';
 
 /// Guest Registration Screen - Form for registering new guests
 class GuestRegistrationScreen extends ConsumerStatefulWidget {
-  const GuestRegistrationScreen({super.key});
+  final String? initialHouseholdId;
+  final Guest? editingGuest;
+
+  const GuestRegistrationScreen({
+    super.key,
+    this.initialHouseholdId,
+    this.editingGuest,
+  });
 
   @override
   ConsumerState<GuestRegistrationScreen> createState() => _GuestRegistrationScreenState();
@@ -20,20 +30,157 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
   final _purposeController = TextEditingController();
   final _vehicleInfoController = TextEditingController();
   final _notesController = TextEditingController();
+  TextEditingController _householdSearchController = TextEditingController();
 
   DateTime _scheduledDate = DateTime.now();
-  String _selectedHouseholdId = '';
   TimeOfDay _expectedArrival = const TimeOfDay(hour: 10, minute: 0);
   TimeOfDay _expectedDeparture = const TimeOfDay(hour: 12, minute: 0);
+  String? _selectedHouseholdId;
+  HouseholdContact? _selectedHousehold;
   bool _includeVehicleInfo = false;
+  bool _isLoading = false;
+  final List<HouseholdContact> _householdSearchResults = <HouseholdContact>[];
+  bool _isSearchingHouseholds = false;
 
-  // Mock household data - will be replaced with actual household service
-  final List<Map<String, String>> _mockHouseholds = [
-    {'id': 'household-1', 'name': 'John Doe - Unit 101'},
-    {'id': 'household-2', 'name': 'Jane Smith - Unit 102'},
-    {'id': 'household-3', 'name': 'Bob Johnson - Unit 201'},
-    {'id': 'household-4', 'name': 'Alice Brown - Unit 202'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  void _initializeData() {
+    if (widget.editingGuest != null) {
+      // Load existing guest data for editing
+      final guest = widget.editingGuest!;
+      _guestNameController.text = guest.guestName;
+      _phoneNumberController.text = guest.phoneNumber;
+      _purposeController.text = guest.purpose;
+      _vehicleInfoController.text = guest.vehicleInfo ?? '';
+      _notesController.text = guest.notes ?? '';
+      _scheduledDate = guest.scheduledDate;
+      _expectedArrival = TimeOfDay(
+        hour: guest.expectedArrivalTime.hour,
+        minute: guest.expectedArrivalTime.minute,
+      );
+      _expectedDeparture = TimeOfDay(
+        hour: guest.expectedDepartureTime.hour,
+        minute: guest.expectedDepartureTime.minute,
+      );
+      _selectedHouseholdId = guest.householdId;
+      _loadHouseholdContact(guest.householdId);
+    } else if (widget.initialHouseholdId != null) {
+      _selectedHouseholdId = widget.initialHouseholdId;
+      _loadHouseholdContact(widget.initialHouseholdId!);
+    }
+  }
+
+  Future<void> _loadHouseholdContact(String householdId) async {
+    setState(() => _isSearchingHouseholds = true);
+
+    try {
+      final contactService = HouseholdContactService();
+      final contact = await contactService.getHouseholdContact(householdId);
+      if (contact != null) {
+        setState(() {
+          _selectedHousehold = contact;
+          _isSearchingHouseholds = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isSearchingHouseholds = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading household: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _searchHouseholds(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _householdSearchResults.clear());
+      return;
+    }
+
+    setState(() => _isSearchingHouseholds = true);
+
+    try {
+      final contactService = HouseholdContactService();
+      final results = await contactService.searchHouseholdContacts(query);
+      setState(() {
+        _householdSearchResults.clear();
+        _householdSearchResults.addAll(results);
+        _isSearchingHouseholds = false;
+      });
+    } catch (e) {
+      setState(() => _isSearchingHouseholds = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error searching households: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _selectHousehold(HouseholdContact household) {
+    setState(() {
+      _selectedHousehold = household;
+      _selectedHouseholdId = household.id;
+      _householdSearchResults.clear();
+      _householdSearchController.text = '${household.headName} - ${household.address}';
+    });
+  }
+
+  void _contactHousehold() async {
+    if (_selectedHousehold == null) return;
+
+    try {
+      final contactService = HouseholdContactService();
+      final guestName = _guestNameController.text.trim();
+
+      if (guestName.isNotEmpty) {
+        final result = await contactService.callHouseholdHead(
+          _selectedHousehold!.id,
+          guestName: guestName,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: result.success ? Colors.green : Colors.orange,
+            ),
+          );
+        }
+      } else {
+        final result = await contactService.callHouseholdHead(_selectedHousehold!.id);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: result.success ? Colors.green : Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error contacting household: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -42,24 +189,29 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
     _purposeController.dispose();
     _vehicleInfoController.dispose();
     _notesController.dispose();
+    _householdSearchController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final guestState = ref.watch(guestProvider);
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register Guest'),
+        title: Text(widget.editingGuest != null ? 'Edit Guest' : 'Register Guest'),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          if (_selectedHousehold != null)
+            IconButton(
+              icon: const Icon(Icons.phone),
+              onPressed: _contactHousehold,
+              tooltip: 'Contact Household',
+            ),
           TextButton(
-            onPressed: _submitForm,
-            child: const Text(
-              'Register',
-              style: TextStyle(
+            onPressed: _isLoading ? null : _submitForm,
+            child: Text(
+              widget.editingGuest != null ? 'Update' : 'Register',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -67,88 +219,94 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Guest Information Section
-              _buildSectionHeader('Guest Information', Icons.person),
-              const SizedBox(height: 16),
-              _buildGuestNameField(),
-              const SizedBox(height: 16),
-              _buildPhoneNumberField(),
-              const SizedBox(height: 16),
-              _buildPurposeField(),
+      body: _isLoading
+          ? const LoadingIndicator()
+          : _buildForm(),
+    );
+  }
 
-              const SizedBox(height: 24),
+  Widget _buildForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Guest Information Section
+            _buildSectionHeader('Guest Information', Icons.person),
+            const SizedBox(height: 16),
+            _buildGuestNameField(),
+            const SizedBox(height: 16),
+            _buildPhoneNumberField(),
+            const SizedBox(height: 16),
+            _buildPurposeField(),
 
-              // Visit Details Section
-              _buildSectionHeader('Visit Details', Icons.calendar_today),
-              const SizedBox(height: 16),
-              _buildHouseholdSelector(),
-              const SizedBox(height: 16),
-              _buildScheduledDateSelector(),
-              const SizedBox(height: 16),
-              _buildTimeSelectors(),
+            const SizedBox(height: 24),
 
-              const SizedBox(height: 24),
+            // Visit Details Section
+            _buildSectionHeader('Visit Details', Icons.calendar_today),
+            const SizedBox(height: 16),
+            _buildHouseholdSelector(),
+            const SizedBox(height: 16),
+            _buildScheduledDateSelector(),
+            const SizedBox(height: 16),
+            _buildTimeSelectors(),
 
-              // Optional Information Section
-              _buildSectionHeader('Optional Information', Icons.info_outline),
+            const SizedBox(height: 24),
+
+            // Optional Information Section
+            _buildSectionHeader('Optional Information', Icons.info_outline),
+            const SizedBox(height: 16),
+            _buildVehicleInfoToggle(),
+            if (_includeVehicleInfo) ...[
               const SizedBox(height: 16),
-              _buildVehicleInfoToggle(),
-              if (_includeVehicleInfo) ...[
-                const SizedBox(height: 16),
-                _buildVehicleInfoField(),
-              ],
-              const SizedBox(height: 16),
-              _buildNotesField(),
-
-              const SizedBox(height: 32),
-
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: guestState.isLoading ? null : _submitForm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: guestState.isLoading
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Registering...'),
-                          ],
-                        )
-                      : const Text(
-                          'Register Guest',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
+              _buildVehicleInfoField(),
             ],
-          ),
+            const SizedBox(height: 16),
+            _buildNotesField(),
+
+            const SizedBox(height: 32),
+
+            // Submit Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _submitForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(widget.editingGuest != null ? 'Updating...' : 'Registering'),
+                        ],
+                      )
+                    : Text(
+                        widget.editingGuest != null ? 'Update Guest' : 'Register Guest',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -257,35 +415,102 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
   }
 
   Widget _buildHouseholdSelector() {
-    return DropdownButtonFormField<String>(
-      value: _selectedHouseholdId.isEmpty ? null : _selectedHouseholdId,
-      decoration: InputDecoration(
-        labelText: 'Hosting Household *',
-        hintText: 'Select household',
-        prefixIcon: const Icon(Icons.home),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Hosting Household *',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
         ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      items: _mockHouseholds.map((household) {
-        return DropdownMenuItem<String>(
-          value: household['id'],
-          child: Text(household['name']!),
-        );
-      }).toList(),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select a hosting household';
-        }
-        return null;
-      },
-      onChanged: (value) {
-        setState(() {
-          _selectedHouseholdId = value ?? '';
-        });
-      },
+        const SizedBox(height: 8),
+        Autocomplete<HouseholdContact>(
+          optionsBuilder: (TextEditingValue textEditingValue) async {
+            await _searchHouseholds(textEditingValue.text);
+            return _householdSearchResults;
+          },
+          displayStringForOption: (HouseholdContact option) =>
+              '${option.headName} - ${option.address}',
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            _householdSearchController = controller;
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: 'Search by name or address...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              validator: (value) {
+                if (_selectedHouseholdId == null) {
+                  return 'Please select a household';
+                }
+                return null;
+              },
+            );
+          },
+          onSelected: (HouseholdContact selection) {
+            _selectHousehold(selection);
+          },
+        ),
+        if (_selectedHousehold != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              border: Border.all(color: Colors.green.shade200),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.home, color: Colors.green.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedHousehold!.headName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                      ),
+                      Text(
+                        _selectedHousehold!.address,
+                        style: TextStyle(
+                          color: Colors.green.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        _selectedHousehold!.headPhone,
+                        style: TextStyle(
+                          color: Colors.green.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_isSearchingHouseholds)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+      ],
     );
   }
 
@@ -450,7 +675,7 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
       ),
       validator: (value) {
         if (_includeVehicleInfo && (value != null && value.isNotEmpty)) {
-          if (value!.length > 200) {
+          if (value.length > 200) {
             return 'Vehicle information must be less than 200 characters';
           }
         }
@@ -540,7 +765,7 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
       return;
     }
 
-    if (_selectedHouseholdId.isEmpty) {
+    if (_selectedHouseholdId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a hosting household'),
@@ -550,42 +775,78 @@ class _GuestRegistrationScreenState extends ConsumerState<GuestRegistrationScree
       return;
     }
 
-    try {
-      await ref.read(guestProvider.notifier).registerGuest(
-        guestName: _guestNameController.text.trim(),
-        phoneNumber: _phoneNumberController.text.trim(),
-        purpose: _purposeController.text.trim(),
-        scheduledDate: _scheduledDate,
-        expectedArrival: _formatTime(_expectedArrival),
-        expectedDeparture: _formatTime(_expectedDeparture),
-        householdId: _selectedHouseholdId,
-        vehicleInfo: _includeVehicleInfo ? _vehicleInfoController.text.trim() : null,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-      );
+    setState(() => _isLoading = true);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Guest registered successfully!'),
-            backgroundColor: Colors.green,
-          ),
+    try {
+      final guestNotifier = ref.read(guestProvider.notifier);
+
+      if (widget.editingGuest != null) {
+        // Update existing guest
+        final updatedGuest = widget.editingGuest!.copyWith(
+          guestName: _guestNameController.text.trim(),
+          phoneNumber: _phoneNumberController.text.trim(),
+          purpose: _purposeController.text.trim(),
+          scheduledDate: _scheduledDate,
+          expectedArrival: _formatTime(_expectedArrival),
+          expectedDeparture: _formatTime(_expectedDeparture),
+          vehicleInfo: _includeVehicleInfo ? _vehicleInfoController.text.trim() : null,
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          updatedAt: DateTime.now(),
         );
-        context.pop();
+
+        await guestNotifier.updateGuest(updatedGuest);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Guest updated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.pop();
+        }
+      } else {
+        // Create new guest
+        await guestNotifier.registerGuest(
+          guestName: _guestNameController.text.trim(),
+          phoneNumber: _phoneNumberController.text.trim(),
+          purpose: _purposeController.text.trim(),
+          scheduledDate: _scheduledDate,
+          expectedArrival: _formatTime(_expectedArrival),
+          expectedDeparture: _formatTime(_expectedDeparture),
+          householdId: _selectedHouseholdId!,
+          vehicleInfo: _includeVehicleInfo ? _vehicleInfoController.text.trim() : null,
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Guest registered successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to register guest: $e'),
+            content: Text('Failed to save guest: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return DateFormat('EEEE, MMMM d, y').format(date);
   }
 
   String _formatTime(TimeOfDay time) {
