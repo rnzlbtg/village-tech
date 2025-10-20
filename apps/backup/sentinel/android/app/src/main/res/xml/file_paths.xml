@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- File provider paths for sharing incident photos -->
+
+    <!-- Internal storage for app photos -->
+    <files-path name="incident_photos" path="incident_photos/" />
+
+    <!-- External storage for shared photos -->
+    <external-files-path name="external_incident_photos" path="incident_photos/" />
+
+    <!-- Cache directory for temporary photos -->
+    <cache-path name="photo_cache" path="photo_cache/" />
+
+    <!-- External cache for larger files -->
+    <external-cache-path name="external_photo_cache" path="photo_cache/" />
+
+    <!-- Root external storage for incident reports -->
+    <external-path name="sentinel_reports" path="Sentinel/Reports/" />
+
+</paths>

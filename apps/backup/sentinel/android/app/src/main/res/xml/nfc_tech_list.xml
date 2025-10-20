@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- NFC Technology list for Sentinel App RFID scanning -->
+    <tech-list>
+        <!-- NDEF Technology -->
+        <tech>android.nfc.tech.Ndef</tech>
+        <tech>android.nfc.tech.NdefFormatable</tech>
+
+        <!-- MIFARE Classic -->
+        <tech>android.nfc.tech.MifareClassic</tech>
+
+        <!-- MIFARE Ultralight -->
+        <tech>android.nfc.tech.MifareUltralight</tech>
+
+        <!-- ISO 14443-4 (NFC-A) -->
+        <tech>android.nfc.tech.IsoDep</tech>
+
+        <!-- ISO 15693 (Vicinity Cards) -->
+        <tech>android.nfc.tech.NfcV</tech>
+
+        <!-- NFC-B -->
+        <tech>android.nfc.tech.NfcB</tech>
+
+        <!-- NFC-F -->
+        <tech>android.nfc.tech.NfcF</tech>
+    </tech-list>
+</resources>

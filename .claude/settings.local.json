@@ -1,6 +1,15 @@
 {
   "permissions": {
-    "allow": ["Bash(git checkout:*)", "Bash(powershell.exe:*)"],
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter packages pub run build_runner build:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter clean:*)"
+    ],
     "deny": [],
     "ask": []
   }

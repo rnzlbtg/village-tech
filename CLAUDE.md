@@ -12,6 +12,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-10
 - [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (003-residence-app-mobile)
 - Flutter 3.24+ / Dart 3 + supabase_flutter, riverpod, go_router, hive (offline cache), flutter_image_compress, firebase_messaging (003-residence-app-mobile)
 - Supabase PostgreSQL with RLS (household-scoped access), Supabase Storage (photo uploads), Hive (offline cache) (003-residence-app-mobile)
+- Flutter 3.24+ / Dart 3 + supabase_flutter, riverpod, go_router, hive (offline cache), flutter_nfc_kit (RFID), firebase_messaging (004-sentinel-app-mobile)
+- Supabase PostgreSQL with RLS (online), Hive (offline cache), Supabase Storage (incident photos) (004-sentinel-app-mobile)
 
 ## Project Structure
 ```
@@ -26,9 +28,9 @@ tests/
 Flutter 3.24+ / Dart 3: Follow standard conventions
 
 ## Recent Changes
+- 004-sentinel-app-mobile: Added Flutter 3.24+ / Dart 3 + supabase_flutter, riverpod, go_router, hive (offline cache), flutter_nfc_kit (RFID), firebase_messaging
 - 003-residence-app-mobile: Added Flutter 3.24+ / Dart 3 + supabase_flutter, riverpod, go_router, hive (offline cache), flutter_image_compress, firebase_messaging
 - 003-residence-app-mobile: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-- 002-admin-app-residential: Added TypeScript 5.0+ / Node.js 20 LTS, React 18+ / TypeScript 5.0+ + Next.js 14, Supabase, shadcn/ui, TanStack Query, React Hook Form
 
 <!-- MANUAL ADDITIONS START -->
 
@@ -42,26 +44,17 @@ TENANT (Residential Community/Village)
 ```
 
 #### Level 1: Tenant
-- **Definition**: The entire residential community or village
-- **Created by**: Platform Super Admin (Platform App - 001)
-- **Examples**: "Greenfield Village", "Sunset Heights Community", "Oakwood Estates"
-- **Attributes**:
   - Community name
   - Community address (e.g., "123 Main St, Manila")
   - Contact information
   - Subscription status (active/trial/suspended)
   - Max residences allowed
-- **Purpose**: Multi-tenant isolation - each tenant's data is completely segregated via PostgreSQL RLS
 
 #### Level 2: Property
-- **Definition**: A physical structure or area within the tenant/community
-- **Created by**: Tenant Admin (Admin App - 002)
-- **Examples**:
   - "Phase 1" (50 single-family homes)
   - "Tower A" (condo building with 100 units)
   - "Townhouse Block" (row of 20 townhouses)
   - "Commercial Section" (business area)
-- **Attributes**:
   - Property name
   - Property address (specific building/phase location)
   - Property type (residential/commercial/mixed)
@@ -69,16 +62,11 @@ TENANT (Residential Community/Village)
   - Total floors (for multi-story buildings)
   - Year built
   - Lot size
-- **Purpose**: Grouping residence units by physical structure or development phase
 
 #### Level 3: Residence Unit
-- **Definition**: An individual dwelling or apartment within a property
-- **Created by**: Tenant Admin (Admin App - 002)
-- **Examples**:
   - "House 25" (in Phase 1)
   - "Unit 101" (in Tower A)
   - "TH-5" (in Townhouse Block)
-- **Attributes**:
   - Unit number/identifier
   - Floor number (for multi-story)
   - Unit type (studio, 1br, 2br, 3br+, house, penthouse)
@@ -87,19 +75,13 @@ TENANT (Residential Community/Village)
   - Square meters
   - Parking slots
   - Occupancy status (occupied/vacant)
-- **Purpose**: Individual household assignment
 
 #### Level 4: Household (References Residence Unit)
-- **Definition**: A family or group of residents living in a residence unit
-- **Created by**: Tenant Admin (Admin App - 002)
-- **Examples**: "Smith Family", "Jones Household"
-- **Attributes**:
   - Household name
   - Residence unit (foreign key)
   - Move-in date
   - Move-out date
   - Status (active/inactive/pending)
-- **Purpose**: Tracking who lives in which unit
 
 ### Why Three Levels?
 
@@ -151,9 +133,6 @@ Tenant: "Oakwood Estates"
 
 ### RLS (Row-Level Security) Enforcement
 
-- **Platform App**: Uses service role (bypasses RLS) or super_admin app_role for cross-tenant access
-- **Admin App**: Uses authenticated user with `app_role: 'admin_head'` or `'admin_officer'` + `tenant_id` in JWT claims
-- **RLS Policies**: All tenant-scoped tables (properties, residence_units, households) filter by `tenant_id = (auth.jwt() ->> 'tenant_id')::uuid`
 
 ### Database Tables
 

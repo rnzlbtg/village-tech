@@ -1,0 +1,1897 @@
+openapi: 3.0.3
+info:
+  title: Sentinel App API
+  description: Gate Guard Access Control API for residential community security management
+  version: 1.0.0
+  contact:
+    name: Village Tech API Support
+    email: support@villagetech.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.villagetech.com/v1
+    description: Production server
+  - url: https://dev-api.villagetech.com/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+tags:
+  - name: Authentication
+    description: Guard authentication and session management
+  - name: RFID
+    description: RFID sticker verification and management
+  - name: Guests
+    description: Guest registration and management
+  - name: Entries
+    description: Entry logging and tracking
+  - name: Deliveries
+    description: Delivery tracking and management
+  - name: Construction
+    description: Construction permit verification
+  - name: Incidents
+    description: Incident reporting and management
+  - name: Rules
+    description: Village rules and guidelines
+  - name: Announcements
+    description: Admin announcements and notifications
+  - name: Sync
+    description: Offline synchronization
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Guard login
+      description: Authenticate guard credentials and create session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh authentication token
+      description: Refresh access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Guard logout
+      description: Terminate guard session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/biometric:
+    post:
+      tags:
+        - Authentication
+      summary: Biometric verification
+      description: Verify biometric authentication for sensitive operations
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BiometricRequest'
+      responses:
+        '200':
+          description: Biometric verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BiometricResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /rfid/verify:
+    post:
+      tags:
+        - RFID
+      summary: Verify RFID sticker
+      description: Validate RFID sticker and return associated information
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RfidVerifyRequest'
+      responses:
+        '200':
+          description: RFID verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidVerifyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /rfid/stickers:
+    get:
+      tags:
+        - RFID
+      summary: List RFID stickers
+      description: Get list of active RFID stickers for tenant
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, expired, disabled, lost]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of RFID stickers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidStickersResponse'
+
+  /rfid/stickers/{id}:
+    put:
+      tags:
+        - RFID
+      summary: Update RFID sticker
+      description: Update RFID sticker status or information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RfidUpdateRequest'
+      responses:
+        '200':
+          description: RFID sticker updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RfidStickerResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /guests:
+    get:
+      tags:
+        - Guests
+      summary: List guests
+      description: Get list of registered guests for today or specified date
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: household_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, checked_in, checked_out, cancelled]
+      responses:
+        '200':
+          description: List of guests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestsResponse'
+
+    post:
+      tags:
+        - Guests
+      summary: Register guest
+      description: Register new guest for household
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuestRegisterRequest'
+      responses:
+        '201':
+          description: Guest registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /guests/{id}/check-in:
+    put:
+      tags:
+        - Guests
+      summary: Check in guest
+      description: Record guest arrival at gate
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Guest checked in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /guests/{id}/check-out:
+    put:
+      tags:
+        - Guests
+      summary: Check out guest
+      description: Record guest departure from gate
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Guest checked out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /entries:
+    post:
+      tags:
+        - Entries
+      summary: Create entry log
+      description: Log new entry/exit at gate
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryCreateRequest'
+      responses:
+        '201':
+          description: Entry log created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags:
+        - Entries
+      summary: Search entry logs
+      description: Search and filter entry logs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: entry_type
+          in: query
+          schema:
+            type: string
+            enum: [resident, guest, delivery, construction, other]
+        - name: guard_id
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntriesResponse'
+
+  /entries/today:
+    get:
+      tags:
+        - Entries
+      summary: Today's entries
+      description: Get all entries for today
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Today's entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntriesResponse'
+
+  /entries/{id}/exit:
+    put:
+      tags:
+        - Entries
+      summary: Record exit time
+      description: Update entry log with exit time
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exit time recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deliveries:
+    get:
+      tags:
+        - Deliveries
+      summary: List deliveries
+      description: Get list of scheduled and active deliveries
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, in_progress, completed, cancelled]
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of deliveries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveriesResponse'
+
+    post:
+      tags:
+        - Deliveries
+      summary: Create delivery
+      description: Log new delivery arrival
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryCreateRequest'
+      responses:
+        '201':
+          description: Delivery created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /deliveries/{id}/complete:
+    put:
+      tags:
+        - Deliveries
+      summary: Complete delivery
+      description: Mark delivery as completed and record exit time
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivery completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /construction/permits:
+    get:
+      tags:
+        - Construction
+      summary: List construction permits
+      description: Get list of active construction permits
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, suspended, cancelled]
+        - name: household_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of construction permits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstructionPermitsResponse'
+
+  /construction/permits/{id}/verify:
+    post:
+      tags:
+        - Construction
+      summary: Verify construction permit
+      description: Verify construction permit and check worker authorization
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConstructionVerifyRequest'
+      responses:
+        '200':
+          description: Permit verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConstructionVerifyResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /incidents:
+    get:
+      tags:
+        - Incidents
+      summary: List incidents
+      description: Get list of incident reports
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, investigating, resolved, closed]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentsResponse'
+
+    post:
+      tags:
+        - Incidents
+      summary: Create incident report
+      description: File new incident report
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentCreateRequest'
+      responses:
+        '201':
+          description: Incident report created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /incidents/{id}/resolve:
+    put:
+      tags:
+        - Incidents
+      summary: Resolve incident
+      description: Mark incident as resolved
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentResolveRequest'
+      responses:
+        '200':
+          description: Incident resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /incidents/{id}/photos:
+    post:
+      tags:
+        - Incidents
+      summary: Upload incident photos
+      description: Upload photo evidence for incident report
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Photos uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentPhotosResponse'
+
+  /rules:
+    get:
+      tags:
+        - Rules
+      summary: Get village rules
+      description: Get list of active village rules and guidelines
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [security, parking, noise, amenities, general]
+      responses:
+        '200':
+          description: List of village rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulesResponse'
+
+  /announcements:
+    get:
+      tags:
+        - Announcements
+      summary: Get announcements
+      description: Get list of announcements for guards
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of announcements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnouncementsResponse'
+
+  /announcements/{id}/acknowledge:
+    post:
+      tags:
+        - Announcements
+      summary: Acknowledge announcement
+      description: Mark announcement as read and acknowledged
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Announcement acknowledged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sync/pending:
+    get:
+      tags:
+        - Sync
+      summary: Get pending operations
+      description: Get list of pending offline operations to sync
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of pending operations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPendingResponse'
+
+  /sync/operations:
+    post:
+      tags:
+        - Sync
+      summary: Submit offline operations
+      description: Submit batch of offline operations for synchronization
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncOperationsRequest'
+      responses:
+        '200':
+          description: Operations processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncOperationsResponse'
+
+  /sync/status:
+    get:
+      tags:
+        - Sync
+      summary: Get sync status
+      description: Get current synchronization status and statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncStatusResponse'
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+        - tenant_code
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        tenant_code:
+          type: string
+        device_info:
+          type: string
+        app_version:
+          type: string
+
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - guard
+        - expires_in
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+        guard:
+          $ref: '#/components/schemas/Guard'
+        tenant:
+          $ref: '#/components/schemas/Tenant'
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+
+    RefreshTokenResponse:
+      type: object
+      required:
+        - access_token
+        - expires_in
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+
+    BiometricRequest:
+      type: object
+      required:
+        - biometric_data
+        - operation_type
+      properties:
+        biometric_data:
+          type: string
+        operation_type:
+          type: string
+          enum: [login, sensitive_action, approve_entry]
+
+    BiometricResponse:
+      type: object
+      required:
+        - verified
+        - timestamp
+      properties:
+        verified:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    RfidVerifyRequest:
+      type: object
+      required:
+        - sticker_code
+      properties:
+        sticker_code:
+          type: string
+        scan_timestamp:
+          type: string
+          format: date-time
+
+    RfidVerifyResponse:
+      type: object
+      required:
+        - valid
+        - sticker
+      properties:
+        valid:
+          type: boolean
+        sticker:
+          $ref: '#/components/schemas/RfidSticker'
+        resident:
+          $ref: '#/components/schemas/Resident'
+        verification_timestamp:
+          type: string
+          format: date-time
+
+    RfidUpdateRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, expired, disabled, lost]
+        notes:
+          type: string
+
+    GuestRegisterRequest:
+      type: object
+      required:
+        - household_id
+        - guest_name
+        - phone_number
+        - scheduled_date
+        - expected_arrival
+        - purpose
+      properties:
+        household_id:
+          type: string
+        guest_name:
+          type: string
+        phone_number:
+          type: string
+        scheduled_date:
+          type: string
+          format: date
+        expected_arrival:
+          type: string
+          format: time
+        expected_departure:
+          type: string
+          format: time
+        purpose:
+          type: string
+        vehicle_info:
+          type: string
+        notes:
+          type: string
+
+    EntryCreateRequest:
+      type: object
+      required:
+        - entry_type
+        - person_name
+        - verification_method
+        - destination
+      properties:
+        entry_type:
+          type: string
+          enum: [resident, guest, delivery, construction, other]
+        person_name:
+          type: string
+        vehicle_info:
+          type: string
+        rfid_sticker_id:
+          type: string
+        guest_id:
+          type: string
+        delivery_id:
+          type: string
+        construction_permit_id:
+          type: string
+        destination:
+          type: string
+        purpose:
+          type: string
+        verification_method:
+          type: string
+          enum: [rfid, manual, phone_call, permit]
+        verification_status:
+          type: string
+          enum: [verified, pending, denied]
+        notes:
+          type: string
+
+    DeliveryCreateRequest:
+      type: object
+      required:
+        - household_id
+        - delivery_company
+        - delivery_person
+        - contact_phone
+        - package_type
+      properties:
+        household_id:
+          type: string
+        delivery_company:
+          type: string
+        delivery_person:
+          type: string
+        contact_phone:
+          type: string
+        package_type:
+          type: string
+          enum: [package, food, document, furniture]
+        recipient_name:
+          type: string
+        special_instructions:
+          type: string
+        is_perishable:
+          type: boolean
+        notes:
+          type: string
+
+    IncidentCreateRequest:
+      type: object
+      required:
+        - incident_type
+        - severity
+        - title
+        - description
+        - location
+      properties:
+        incident_type:
+          type: string
+          enum: [security_breach, rule_violation, emergency, maintenance]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        violator_name:
+          type: string
+        violator_info:
+          type: string
+        incident_time:
+          type: string
+          format: date-time
+
+    IncidentResolveRequest:
+      type: object
+      required:
+        - resolution_notes
+      properties:
+        resolution_notes:
+          type: string
+
+    ConstructionVerifyRequest:
+      type: object
+      required:
+        - worker_name
+      properties:
+        worker_name:
+          type: string
+        worker_id:
+          type: string
+        notes:
+          type: string
+
+    SyncOperationsRequest:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - operation
+              - entity_type
+              - entity_id
+              - payload
+              - timestamp
+            properties:
+              id:
+                type: string
+              operation:
+                type: string
+                enum: [CREATE, UPDATE, DELETE]
+              entity_type:
+                type: string
+              entity_id:
+                type: string
+              payload:
+                type: object
+              timestamp:
+                type: string
+                format: date-time
+
+    Guard:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - email
+        - full_name
+        - role
+        - is_active
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [head_guard, guard_officer, guard_trainee]
+        phone:
+          type: string
+        employee_id:
+          type: string
+        is_active:
+          type: boolean
+        last_login_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Tenant:
+      type: object
+      required:
+        - id
+        - name
+        - address
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        contact_email:
+          type: string
+        contact_phone:
+          type: string
+        subscription_status:
+          type: string
+          enum: [active, trial, suspended]
+        max_residences:
+          type: integer
+
+    RfidSticker:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - sticker_code
+        - status
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        sticker_code:
+          type: string
+        resident_id:
+          type: string
+        vehicle_info:
+          type: string
+        license_plate:
+          type: string
+        status:
+          type: string
+          enum: [active, expired, disabled, lost]
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+
+    Resident:
+      type: object
+      required:
+        - id
+        - full_name
+        - household_id
+      properties:
+        id:
+          type: string
+        full_name:
+          type: string
+        household_id:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+
+    Guest:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - household_id
+        - guest_name
+        - status
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        household_id:
+          type: string
+        guest_name:
+          type: string
+        phone_number:
+          type: string
+        purpose:
+          type: string
+        scheduled_date:
+          type: string
+          format: date
+        expected_arrival:
+          type: string
+        expected_departure:
+          type: string
+        status:
+          type: string
+          enum: [pending, checked_in, checked_out, cancelled]
+        vehicle_info:
+          type: string
+        notes:
+          type: string
+        actual_arrival:
+          type: string
+          format: date-time
+        actual_departure:
+          type: string
+          format: date-time
+
+    EntryLog:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - guard_id
+        - entry_type
+        - person_name
+        - verification_method
+        - entry_time
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        guard_id:
+          type: string
+        entry_type:
+          type: string
+          enum: [resident, guest, delivery, construction, other]
+        person_name:
+          type: string
+        vehicle_info:
+          type: string
+        rfid_sticker_id:
+          type: string
+        guest_id:
+          type: string
+        delivery_id:
+          type: string
+        construction_permit_id:
+          type: string
+        destination:
+          type: string
+        purpose:
+          type: string
+        verification_method:
+          type: string
+          enum: [rfid, manual, phone_call, permit]
+        verification_status:
+          type: string
+          enum: [verified, pending, denied]
+        entry_time:
+          type: string
+          format: date-time
+        exit_time:
+          type: string
+          format: date-time
+        duration_on_site:
+          type: string
+        notes:
+          type: string
+
+    Delivery:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - household_id
+        - delivery_company
+        - status
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        household_id:
+          type: string
+        delivery_company:
+          type: string
+        delivery_person:
+          type: string
+        contact_phone:
+          type: string
+        package_type:
+          type: string
+          enum: [package, food, document, furniture]
+        recipient_name:
+          type: string
+        special_instructions:
+          type: string
+        is_perishable:
+          type: boolean
+        scheduled_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [scheduled, in_progress, completed, cancelled]
+        arrival_time:
+          type: string
+          format: date-time
+        departure_time:
+          type: string
+          format: date-time
+        time_on_site:
+          type: string
+
+    ConstructionPermit:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - household_id
+        - project_name
+        - status
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        household_id:
+          type: string
+        project_name:
+          type: string
+        contractor_name:
+          type: string
+        contractor_contact:
+          type: string
+        contractor_phone:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, completed, suspended, cancelled]
+        authorized_workers:
+          type: array
+          items:
+            type: string
+        work_hours:
+          type: string
+        work_areas:
+          type: string
+
+    IncidentReport:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - guard_id
+        - incident_type
+        - severity
+        - title
+        - status
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        guard_id:
+          type: string
+        incident_type:
+          type: string
+          enum: [security_breach, rule_violation, emergency, maintenance]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        title:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        violator_name:
+          type: string
+        violator_info:
+          type: string
+        incident_time:
+          type: string
+          format: date-time
+        photo_urls:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [open, investigating, resolved, closed]
+        resolution_notes:
+          type: string
+        resolved_by_guard_id:
+          type: string
+        resolved_at:
+          type: string
+          format: date-time
+
+    VillageRule:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - category
+        - title
+        - description
+        - enforcement_level
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        category:
+          type: string
+          enum: [security, parking, noise, amenities, general]
+        title:
+          type: string
+        description:
+          type: string
+        enforcement_level:
+          type: string
+          enum: [warning, fine, deny_entry, escalate]
+        is_active:
+          type: boolean
+        display_order:
+          type: integer
+
+    Announcement:
+      type: object
+      required:
+        - id
+        - tenant_id
+        - title
+        - content
+        - priority
+        - is_active
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        target_audience:
+          type: string
+          enum: [all_guards, head_guards, specific_guard]
+        target_guard_ids:
+          type: array
+          items:
+            type: string
+        is_active:
+          type: boolean
+        requires_acknowledgment:
+          type: boolean
+        acknowledged_by:
+          type: array
+          items:
+            type: string
+        scheduled_for:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    SyncOperation:
+      type: object
+      required:
+        - id
+        - operation
+        - entity_type
+        - entity_id
+        - priority
+        - retry_count
+      properties:
+        id:
+          type: string
+        operation:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        payload:
+          type: object
+        priority:
+          type: string
+          enum: [critical, high, normal, low]
+        retry_count:
+          type: integer
+        scheduled_for:
+          type: string
+          format: date-time
+        last_attempt_at:
+          type: string
+          format: date-time
+
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    PaginatedResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        pagination:
+          type: object
+          required:
+            - total
+            - limit
+            - offset
+          properties:
+            total:
+              type: integer
+            limit:
+              type: integer
+            offset:
+              type: integer
+            has_more:
+              type: boolean
+
+    # Response schemas
+    RfidStickersResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/RfidSticker'
+
+    RfidStickerResponse:
+      type: object
+      required:
+        - success
+        - sticker
+      properties:
+        success:
+          type: boolean
+        sticker:
+          $ref: '#/components/schemas/RfidSticker'
+
+    GuestsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Guest'
+
+    GuestResponse:
+      type: object
+      required:
+        - success
+        - guest
+      properties:
+        success:
+          type: boolean
+        guest:
+          $ref: '#/components/schemas/Guest'
+
+    EntriesResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/EntryLog'
+
+    EntryResponse:
+      type: object
+      required:
+        - success
+        - entry
+      properties:
+        success:
+          type: boolean
+        entry:
+          $ref: '#/components/schemas/EntryLog'
+
+    DeliveriesResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Delivery'
+
+    DeliveryResponse:
+      type: object
+      required:
+        - success
+        - delivery
+      properties:
+        success:
+          type: boolean
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+
+    ConstructionPermitsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/ConstructionPermit'
+
+    ConstructionVerifyResponse:
+      type: object
+      required:
+        - valid
+        - permit
+      properties:
+        valid:
+          type: boolean
+        permit:
+          $ref: '#/components/schemas/ConstructionPermit'
+        worker_authorized:
+          type: boolean
+        message:
+          type: string
+
+    IncidentsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/IncidentReport'
+
+    IncidentResponse:
+      type: object
+      required:
+        - success
+        - incident
+      properties:
+        success:
+          type: boolean
+        incident:
+          $ref: '#/components/schemas/IncidentReport'
+
+    IncidentPhotosResponse:
+      type: object
+      required:
+        - success
+        - photo_urls
+      properties:
+        success:
+          type: boolean
+        photo_urls:
+          type: array
+          items:
+            type: string
+
+    RulesResponse:
+      type: object
+      required:
+        - success
+        - rules
+      properties:
+        success:
+          type: boolean
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/VillageRule'
+
+    AnnouncementsResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Announcement'
+
+    SyncPendingResponse:
+      type: object
+      required:
+        - success
+        - operations
+      properties:
+        success:
+          type: boolean
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncOperation'
+
+    SyncOperationsResponse:
+      type: object
+      required:
+        - success
+        - processed
+        - failed
+        - conflicts
+      properties:
+        success:
+          type: boolean
+        processed:
+          type: integer
+        failed:
+          type: integer
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              operation_id:
+                type: string
+              conflict_type:
+                type: string
+              local_data:
+                type: object
+              remote_data:
+                type: object
+
+    SyncStatusResponse:
+      type: object
+      required:
+        - success
+        - status
+      properties:
+        success:
+          type: boolean
+        status:
+          type: object
+          properties:
+            last_sync:
+              type: string
+              format: date-time
+            pending_operations:
+              type: integer
+            failed_operations:
+              type: integer
+            conflicts:
+              type: integer
+            sync_in_progress:
+              type: boolean
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
