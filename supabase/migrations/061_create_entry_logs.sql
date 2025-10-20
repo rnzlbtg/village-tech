@@ -41,8 +41,9 @@ CREATE INDEX idx_entry_logs_synced ON entry_logs(synced);
 
 -- Composite indexes for common queries
 CREATE INDEX idx_entry_logs_tenant_entry_time ON entry_logs(tenant_id, entry_time);
-CREATE INDEX idx_entry_logs_today_entries ON entry_logs(tenant_id, entry_time)
-  WHERE entry_time >= CURRENT_DATE;
+-- Partial index for today's entries (removed date predicate due to IMMUTABLE requirement)
+-- The composite index idx_entry_logs_tenant_entry_time can be used for today's entries queries
+CREATE INDEX idx_entry_logs_tenant_entry_time_desc ON entry_logs(tenant_id, entry_time DESC);
 CREATE INDEX idx_entry_logs_active_entries ON entry_logs(tenant_id, entry_time, exit_time)
   WHERE exit_time IS NULL;
 

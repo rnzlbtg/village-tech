@@ -14,6 +14,7 @@ import {
   Megaphone,
   DollarSign,
   BookOpen,
+  UserCog,
   X,
   LogOut,
   HelpCircle,
@@ -34,20 +35,13 @@ const Sidebar: React.FC<SidebarProps> = ({ tenantName, userName, sidebarOpen, se
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Properties', href: '/properties', icon: Building2 },
     { name: 'Households', href: '/households', icon: Users },
+    { name: 'User Management', href: '/users', icon: UserCog },
     { name: 'Vehicle Stickers', href: '/stickers', icon: Car },
     { name: 'Construction Permits', href: '/permits', icon: FileText },
     { name: 'Announcements', href: '/announcements', icon: Megaphone },
     { name: 'Fees & Payments', href: '/fees', icon: DollarSign },
     { name: 'Village Rules', href: '/rules', icon: BookOpen },
   ]
-
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    toast.success('Logged out successfully')
-    router.push('/login')
-    router.refresh()
-  }
 
   const isActive = (href: string) => {
     return pathname === href || (pathname?.startsWith(href + '/') ?? false)
@@ -93,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ tenantName, userName, sidebarOpen, se
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-2 ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   active
                     ? 'bg-primary-light text-primary font-medium'
                     : 'text-gray-700 hover:bg-gray-100'
@@ -101,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ tenantName, userName, sidebarOpen, se
                 onClick={() => setSidebarOpen?.(false)}
               >
                 <Icon className={`h-5 w-5 ${active ? 'text-primary' : 'text-gray-500'}`} />
-                <span>{item.name}</span>
+                <span className="text-sm">{item.name}</span>
               </Link>
             )
           })}
@@ -116,13 +110,6 @@ const Sidebar: React.FC<SidebarProps> = ({ tenantName, userName, sidebarOpen, se
             <HelpCircle className="h-5 w-5 text-gray-500" />
             Help & Support
           </Link>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Logout
-          </button>
         </div>
       </div>
     </aside>

@@ -36,17 +36,17 @@ CREATE INDEX idx_guard_sessions_tenant_active ON guard_sessions(tenant_id, is_ac
 -- RLS Policies
 CREATE POLICY "Guards can view own sessions" ON guard_sessions
   FOR SELECT USING (
-    guard_id = auth.jwt() ->> 'user_id'::uuid
+    guard_id = (auth.jwt() ->> 'user_id')::uuid
   );
 
 CREATE POLICY "Guards can create own sessions" ON guard_sessions
   FOR INSERT WITH CHECK (
-    guard_id = auth.jwt() ->> 'user_id'::uuid
+    guard_id = (auth.jwt() ->> 'user_id')::uuid
   );
 
 CREATE POLICY "Guards can update own sessions" ON guard_sessions
   FOR UPDATE USING (
-    guard_id = auth.jwt() ->> 'user_id'::uuid
+    guard_id = (auth.jwt() ->> 'user_id')::uuid
   );
 
 CREATE POLICY "Head guards can view tenant sessions" ON guard_sessions
