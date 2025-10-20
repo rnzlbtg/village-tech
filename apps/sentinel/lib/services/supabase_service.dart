@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:supabase/supabase.dart';
 
 import '../models/guard.dart';
 import '../models/rfid_sticker.dart';
@@ -48,39 +46,71 @@ class SupabaseService {
   SupabaseService._internal();
 
   late final SupabaseClient _supabase;
-  late final SupabaseClient _supabaseServiceRole;
   bool _isInitialized = false;
   String? _currentTenantId;
 
   /// Getters
   bool get isInitialized => _isInitialized;
   String? get currentTenantId => _currentTenantId;
+  SupabaseClient get client {
+    if (!_isInitialized) {
+      throw Exception('SupabaseService not initialized. Call initialize() first.');
+    }
+    return _supabase;
+  }
 
   /// Initialize Supabase client
   Future<void> initialize() async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      debugPrint('✅ SUPABASE SERVICE: Already initialized');
+      return;
+    }
 
     try {
-      // Initialize Supabase Flutter
-      await Supabase.initialize(
-        url: Environment.supabaseUrl,
-        anonKey: Environment.supabaseAnonKey,
-      );
+      // Log configuration
+      debugPrint('🔧 SUPABASE SERVICE INITIALIZATION');
+      debugPrint('🔧 SUPABASE URL: ${Environment.supabaseUrl}');
+      debugPrint('🔧 SUPABASE ANON KEY: ${Environment.supabaseAnonKey.isNotEmpty ? 'SET' : 'EMPTY'}');
 
-      _supabase = Supabase.instance.client;
+      if (Environment.supabaseUrl.isEmpty) {
+        throw Exception('Supabase URL is not configured. Please check your environment variables.');
+      }
 
-      // Initialize service role client for admin operations
-      if (Environment.supabaseServiceRoleKey.isNotEmpty) {
-        _supabaseServiceRole = SupabaseClient(
-          Environment.supabaseUrl,
-          Environment.supabaseServiceRoleKey,
+      if (Environment.supabaseAnonKey.isEmpty) {
+        throw Exception('Supabase Anon Key is not configured. Please check your environment variables.');
+      }
+
+      // Check if Supabase is already initialized
+      debugPrint('🔍 CHECKING SUPABASE INITIALIZATION STATUS...');
+      try {
+        // Try to access the client to see if it's already initialized
+        final client = Supabase.instance.client;
+        debugPrint('✅ SUPABASE ALREADY INITIALIZED - Using existing instance');
+        _supabase = client;
+        _isInitialized = true;
+        debugPrint('✅ SUPABASE SERVICE: Initialized with existing instance');
+        return;
+      } catch (e) {
+        // Not initialized yet, so initialize it
+        debugPrint('🔧 INITIALIZING NEW SUPABASE INSTANCE (Error was: $e)');
+        debugPrint('🔧 CALLING Supabase.initialize()...');
+
+        // Initialize Supabase Flutter
+        await Supabase.initialize(
+          url: Environment.supabaseUrl,
+          anonKey: Environment.supabaseAnonKey,
         );
+
+        debugPrint('✅ SUPABASE.initialize() completed, getting client...');
+        _supabase = Supabase.instance.client;
+        debugPrint('✅ SUPABASE SERVICE INITIALIZED SUCCESSFULLY');
       }
 
       _isInitialized = true;
-      debugPrint('Supabase service initialized successfully');
+      debugPrint('✅ SUPABASE SERVICE: Initialization complete');
     } catch (e) {
-      debugPrint('Failed to initialize Supabase: $e');
+      debugPrint('❌ FAILED TO INITIALIZE SUPABASE: $e');
+      debugPrint('❌ STACK TRACE: ${StackTrace.current}');
       rethrow;
     }
   }
@@ -88,7 +118,10 @@ class SupabaseService {
   /// Set current tenant context for RLS
   void setCurrentTenant(String tenantId) {
     _currentTenantId = tenantId;
-    _supabase.rpc('set_tenant_context', params: {'tenant_id': tenantId});
+
+    if (_isInitialized) {
+      _supabase.rpc('set_tenant_context', params: {'tenant_id': tenantId});
+    }
   }
 
   /// Clear current tenant context
@@ -105,25 +138,49 @@ class SupabaseService {
     required String tenantId,
   }) async {
     try {
-      setCurrentTenant(tenantId);
-
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
       if (response.user != null) {
-        // Get guard profile
-        final guardData = await _supabase
-            .from('guards')
+        String actualTenantId = tenantId;
+
+        // Auto-detect tenant ID if 'auto' is passed
+        if (tenantId == 'auto') {
+          debugPrint('🔍 SIGN IN - Auto-detecting tenant ID for user: $email');
+          final detectedTenantId = await _detectTenantId(response.user!, email);
+
+          debugPrint('🔍 SIGN IN - Detected tenant ID: $detectedTenantId');
+          if (detectedTenantId == null) {
+            debugPrint('❌ SIGN IN - Could not determine tenant context for user: $email');
+            return ApiResponse.error('Could not determine tenant context for this user');
+          }
+          actualTenantId = detectedTenantId;
+        }
+
+        // Set tenant context
+        setCurrentTenant(actualTenantId);
+        debugPrint('🔍 SIGN IN - Set tenant context: $actualTenantId');
+
+        // Get user profile
+        debugPrint('🔍 SIGN IN - Querying user profile for email: $email, tenant: $actualTenantId');
+        Map<String, dynamic>? userProfileData = await _supabase
+            .from('user_profiles')
             .select()
             .eq('email', email)
-            .eq('tenant_id', tenantId)
-            .single();
+            .eq('tenant_id', actualTenantId)
+            .maybeSingle();
+
+        debugPrint('🔍 SIGN IN - User profile data result: ${userProfileData != null ? 'FOUND' : 'NOT FOUND'}');
+        if (userProfileData == null) {
+          debugPrint('❌ SIGN IN - User profile not found for email: $email in tenant: $actualTenantId');
+          return ApiResponse.error('Your account is authenticated but no user profile exists. Please contact your administrator to create a user profile for your account.');
+        }
 
         return ApiResponse.success({
           'user': response.user!.toJson(),
-          'guard': guardData,
+          'userProfile': userProfileData,
         }, message: 'Sign in successful');
       } else {
         return ApiResponse.error('Sign in failed', message: 'Invalid credentials');
@@ -137,6 +194,41 @@ class SupabaseService {
     }
   }
 
+  
+  /// Auto-detect tenant ID from user metadata or guard relationship
+  Future<String?> _detectTenantId(User user, String email) async {
+    try {
+      debugPrint('🔍 TENANT DETECTION - Starting for user: $email');
+
+      // Method 1: Check user metadata first (preferred)
+      final tenantId = user.appMetadata['tenant_id'] as String?;
+      debugPrint('🔍 TENANT DETECTION - User metadata tenant_id: $tenantId');
+      if (tenantId != null) {
+        debugPrint('✅ TENANT DETECTION - Using tenant from user metadata: $tenantId');
+        return tenantId;
+      }
+
+      // Method 2: Query via user profile relationship (fallback)
+      debugPrint('🔍 TENANT DETECTION - Querying user_profiles table for email: $email');
+      final userProfileData = await _supabase
+          .from('user_profiles')
+          .select('tenant_id')
+          .eq('email', email)
+          .maybeSingle();
+
+      debugPrint('🔍 TENANT DETECTION - User profile query result: ${userProfileData != null ? 'FOUND' : 'NOT FOUND'}');
+      if (userProfileData != null) {
+        debugPrint('🔍 TENANT DETECTION - User profile tenant_id: ${userProfileData['tenant_id']}');
+      }
+
+      return userProfileData?['tenant_id'] as String?;
+    } catch (e) {
+      debugPrint('❌ TENANT DETECTION - Error: $e');
+      return null;
+    }
+  }
+
+  
   /// Sign out guard
   Future<ApiResponse<void>> signOut() async {
     try {
@@ -151,7 +243,9 @@ class SupabaseService {
   }
 
   /// Get current user
-  User? get currentUser => _supabase.auth.currentUser;
+  User? get currentUser {
+    return _supabase.auth.currentUser;
+  }
 
   // ==================== GUARD OPERATIONS ====================
 
@@ -457,7 +551,7 @@ class SupabaseService {
           .order('created_at', ascending: true)
           .limit(50);
 
-      return ApiResponse.success(response as List<Map<String, dynamic>>);
+      return ApiResponse.success(response);
     } on PostgrestException catch (e) {
       return ApiResponse.error('Failed to get sync operations: ${e.message}');
     } catch (e) {
