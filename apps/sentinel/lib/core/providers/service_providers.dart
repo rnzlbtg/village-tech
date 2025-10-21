@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/supabase_service.dart';
+import 'auth_provider.dart' as auth;
+import '../../models/guard.dart';
 import '../../services/offline_cache_service.dart';
 import '../../services/entry_service.dart';
 import '../../services/nfc_service.dart';
@@ -62,7 +64,20 @@ final supabaseClientProvider = Provider<SupabaseClient>((ref) {
   return Supabase.instance.client;
 });
 
+// Authentication State Provider
+final authStateProvider = StateNotifierProvider<auth.AuthStateNotifier, auth.AuthState>((ref) {
+  final supabaseService = ref.watch(supabaseServiceProvider);
+  return auth.AuthStateNotifier(supabaseService);
+});
+
+// Current User Provider
 final currentUserProvider = StreamProvider<User?>((ref) {
   return Supabase.instance.client.auth.onAuthStateChange
       .map((event) => event.session?.user);
 });
+
+// Current Guard Provider
+final currentGuardProvider = StateProvider<Guard?>((ref) => null);
+
+// Tenant ID Provider
+final tenantIdProvider = StateProvider<String?>((ref) => null);

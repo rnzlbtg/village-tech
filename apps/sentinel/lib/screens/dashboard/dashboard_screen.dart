@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/providers/auth_provider.dart';
+import '../../core/providers/service_providers.dart';
 import '../../core/router/app_router.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../utils/constants.dart';
@@ -45,26 +47,41 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          _buildDrawerHeader(),
+          _buildDrawerHeader(context, ref),
           const Divider(height: 1),
           _buildNavigationItems(context),
           const Divider(height: 1),
-          _buildBottomActions(context),
+          _buildBottomActions(context, ref),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerHeader() {
+  Widget _buildDrawerHeader(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    debugPrint('🔍 AuthState: $authState');
+
+    // Extract user details from userMetadata
+    final userMetadata = authState.user?.userMetadata ?? {};
+    final firstName = userMetadata['first_name'] as String? ?? 'Guard';
+    final lastName = userMetadata['last_name'] as String? ?? '';
+    final guardName = lastName.isNotEmpty ? '$firstName $lastName' : firstName;
+
+    // Format role from snake_case to Title Case
+    final rawRole = userMetadata['role'] as String? ?? 'Officer';
+    final userRole = rawRole.split('_').map((word) =>
+      word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1)
+    ).join(' ');
+
     return DrawerHeader(
       decoration: const BoxDecoration(color: AppTheme.primaryColor),
       child: Column(
@@ -109,16 +126,18 @@ class AppDrawer extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Guard Name',
-                        style: TextStyle(
+                      Text(
+                        guardName,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                       Text(
-                        'On Duty',
+                        userRole,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 9,
@@ -225,7 +244,7 @@ class AppDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomActions(BuildContext context) {
+  Widget _buildBottomActions(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         ListTile(
@@ -254,16 +273,56 @@ class AppDrawer extends StatelessWidget {
             vertical: 4,
           ),
         ),
-        ListTile(
+          ListTile(
           dense: true,
           leading: const Icon(Icons.logout, color: Colors.red, size: 20),
           title: const Text(
             'Logout',
             style: TextStyle(color: Colors.red, fontSize: 14),
           ),
-          onTap: () {
+          onTap: () async {
             Navigator.of(context).pop();
-            _showLogoutDialog(context);
+            // Cache auth notifier before widget disposal
+            final authNotifier = ref.read(authStateProvider.notifier);
+
+            // Show loading indicator
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const AlertDialog(
+                content: Row(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: 20),
+                    Text('Logging out...'),
+                  ],
+                ),
+              ),
+            );
+
+            try {
+              // Call the signOut method from the cached auth notifier
+              await authNotifier.signOut();
+
+              // Close loading dialog and navigate to login
+              if (context.mounted) {
+                Navigator.of(context).pop(); // Close loading dialog
+                context.go(AppRoutes.login);
+              }
+            } catch (e) {
+              // Close loading dialog
+              if (context.mounted) {
+                Navigator.of(context).pop();
+
+                // Show error message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Logout failed: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -281,30 +340,6 @@ class AppDrawer extends StatelessWidget {
     } catch (e) {
       return false;
     }
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.go(AppRoutes.login);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -343,13 +378,25 @@ class DashboardHomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome back!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final authState = ref.watch(authStateProvider);
+
+                      // Extract user details from userMetadata
+                      final userMetadata = authState.user?.userMetadata ?? {};
+                      final firstName = userMetadata['first_name'] as String? ?? 'Guard';
+                      final lastName = userMetadata['last_name'] as String? ?? '';
+                      final guardName = lastName.isNotEmpty ? '$firstName $lastName' : firstName;
+
+                      return Text(
+                        'Welcome back, $guardName!',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 8),
                   Text(

@@ -174,6 +174,87 @@ INSERT INTO auth.identities (
   NOW()
 ) ON CONFLICT (provider, provider_id) DO NOTHING;
 
+-- ============================================================================
+-- CREATE SECURITY HEAD USER FOR SUNSET VALLEY
+-- ============================================================================
+-- Create security head for the created tenant
+-- Credentials: security@sunsetvalley.com / security
+
+-- Create auth user with security_head role
+INSERT INTO auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  confirmation_token,
+  email_change,
+  email_change_token_new,
+  recovery_token
+) VALUES (
+  '00000000-0000-0000-0000-000000000000',
+  '33333333-3333-3333-3333-333333333333'::uuid,
+  'authenticated',
+  'authenticated',
+  'security@sunsetvalley.com',
+  crypt('security', gen_salt('bf')),
+  NOW(),
+  '{"tenant_id": "11111111-1111-1111-1111-111111111111", "app_role": "security_head"}'::jsonb,
+  '{}'::jsonb,
+  NOW(),
+  NOW(),
+  '',
+  '',
+  '',
+  ''
+) ON CONFLICT (id) DO NOTHING;
+
+-- Create user profile for security head
+INSERT INTO user_profiles (
+  id,
+  tenant_id,
+  email,
+  first_name,
+  last_name,
+  role,
+  is_active
+) VALUES (
+  '33333333-3333-3333-3333-333333333333'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  'security@sunsetvalley.com',
+  'Carlos',
+  'Guardia',
+  'security_head',
+  true
+) ON CONFLICT (id) DO NOTHING;
+
+-- Create identity record for email authentication
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+) VALUES (
+  '33333333-3333-3333-3333-333333333333',
+  '33333333-3333-3333-3333-333333333333'::uuid,
+  format('{"sub":"%s","email":"%s"}', '33333333-3333-3333-3333-333333333333'::text, 'security@sunsetvalley.com')::jsonb,
+  'email',
+  '33333333-3333-3333-3333-333333333333',
+  NOW(),
+  NOW(),
+  NOW()
+) ON CONFLICT (provider, provider_id) DO NOTHING;
+
 -- Create identity record for email authentication
 INSERT INTO auth.identities (
   id,
@@ -342,6 +423,7 @@ INSERT INTO households (
   id,
   tenant_id,
   residence_unit_id,
+  household_head_id,
   household_name,
   move_in_date,
   status,
@@ -351,6 +433,7 @@ INSERT INTO households (
   '88888888-8888-8888-8888-888888888881'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   '55555555-5555-5555-5555-555555555552'::uuid,
+  '77777777-7777-7777-7777-777777777771'::uuid,
   'Dela Cruz Family',
   '2023-01-15',
   'active',
@@ -415,6 +498,7 @@ INSERT INTO households (
   id,
   tenant_id,
   residence_unit_id,
+  household_head_id,
   household_name,
   move_in_date,
   status,
@@ -424,6 +508,7 @@ INSERT INTO households (
   '88888888-8888-8888-8888-888888888882'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   '55555555-5555-5555-5555-555555555554'::uuid,
+  '77777777-7777-7777-7777-777777777772'::uuid,
   'Reyes Family',
   '2022-06-10',
   'active',
@@ -488,6 +573,7 @@ INSERT INTO households (
   id,
   tenant_id,
   residence_unit_id,
+  household_head_id,
   household_name,
   move_in_date,
   status,
@@ -497,6 +583,7 @@ INSERT INTO households (
   '88888888-8888-8888-8888-888888888883'::uuid,
   '11111111-1111-1111-1111-111111111111'::uuid,
   '66666666-6666-6666-6666-666666666661'::uuid,
+  '77777777-7777-7777-7777-777777777773'::uuid,
   'Santos Family',
   '2021-03-20',
   'active',
@@ -530,9 +617,194 @@ ON CONFLICT (provider, provider_id) DO NOTHING;
 --    - Can create rules, permits, users, etc.
 --    - Can manage village operations
 --
--- 3. HOUSEHOLD HEADS:
+-- 3. SECURITY HEAD (Sunset Valley Residences):
+--    Email: security@sunsetvalley.com
+--    Password: security
+--    - Can manage security operations
+--    - Can handle guest check-ins/outs
+--    - Can monitor security incidents
+--    - Can manage guard operations
+--
+-- 4. HOUSEHOLD HEADS:
 --    Email: juan.delacruz@sunsetvalley.com / Password: password (Unit 102)
 --    Email: maria.reyes@sunsetvalley.com / Password: password (Unit 104)
 --    Email: roberto.santos@sunsetvalley.com / Password: password (GV-01)
 --
 -- Use the tenant admin account (admin@sunsetvalley.com) for testing the rules functionality.
+-- Use the security head account (security@sunsetvalley.com) for testing security operations.
+
+-- ============================================================================
+-- CREATE SAMPLE GUEST DATA FOR TESTING
+-- ============================================================================
+-- Create sample guests for today and future dates
+
+-- Guest 1: Today's guest for Dela Cruz Family (Unit 102)
+INSERT INTO guests (
+  id,
+  tenant_id,
+  household_id,
+  guest_name,
+  phone_number,
+  purpose,
+  visit_start,
+  visit_end,
+  status,
+  vehicle_info,
+  notes,
+  created_at,
+  updated_at
+) VALUES (
+  '99999999-9999-9999-9999-999999999991'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '88888888-8888-8888-8888-888888888881'::uuid,
+  'John Smith',
+  '+63 912 345 1001',
+  'Business Meeting',
+  NOW()::timestamp,
+  (NOW() + INTERVAL '4 hours')::timestamp,
+  '14:00',
+  '16:00',
+  'scheduled',
+  'Toyota Vios - ABC 123',
+  'Meeting with Dela Cruz family to discuss business proposal',
+  NOW()::timestamp,
+  NOW()::timestamp
+) ON CONFLICT (id) DO NOTHING;
+
+-- Guest 2: Today's guest for Reyes Family (Unit 104) - Checked In
+INSERT INTO guests (
+  id,
+  tenant_id,
+  household_id,
+  guest_name,
+  phone_number,
+  purpose,
+  visit_start,
+  visit_end,
+  status,
+  vehicle_info,
+  check_in_time,
+  created_at,
+  updated_at
+) VALUES (
+  '99999999-9999-9999-9999-999999999992'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '88888888-8888-8888-8888-888888888882'::uuid,
+  'Maria Garcia',
+  '+63 912 345 1002',
+  'Family Visit',
+  NOW()::timestamp - INTERVAL '2 hours'::timestamp,
+  NOW()::timestamp + INTERVAL '2 hours'::timestamp,
+  '10:00',
+  '12:00',
+  'checked_in',
+  'Honda Civic - XYZ 789',
+  (NOW() - INTERVAL '30 minutes'::timestamp)::timestamp,
+  NOW()::timestamp - INTERVAL '30 minutes'::timestamp,
+  NOW()::timestamp,
+  NOW()::timestamp
+) ON CONFLICT (id) DO NOTHING;
+
+-- Guest 3: Future guest for Santos Family (GV-01)
+INSERT INTO guests (
+  id,
+  tenant_id,
+  household_id,
+  guest_name,
+  phone_number,
+  purpose,
+  visit_start,
+  visit_end,
+  status,
+  vehicle_info,
+  notes,
+  created_at,
+  updated_at
+) VALUES (
+  '99999999-9999-9999-9999-999999999993'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '88888888-8888-8888-8888-888888888883'::uuid,
+  'David Chen',
+  '+63 912 345 1003',
+  'Delivery Service',
+  (NOW() + INTERVAL '1 day'::timestamp)::timestamp,
+  (NOW() + INTERVAL '1 day'::timestamp + INTERVAL '2 hours'::timestamp)::timestamp,
+  '09:00',
+  '11:00',
+  'scheduled',
+  'Delivery Van - DEL 456',
+  'Furniture delivery scheduled for tomorrow',
+  NOW()::timestamp,
+  NOW()::timestamp
+) ON CONFLICT (id) DO NOTHING;
+
+-- Guest 4: Yesterday's guest (should not appear in "Today Only" filter)
+INSERT INTO guests (
+  id,
+  tenant_id,
+  household_id,
+  guest_name,
+  phone_number,
+  purpose,
+  visit_start,
+  visit_end,
+  status,
+  vehicle_info,
+  check_in_time,
+  check_out_time,
+  created_at,
+  updated_at
+) VALUES (
+  '99999999-9999-9999-9999-999999999994'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '88888888-8888-8888-8888-888888888881'::uuid,
+  'Lisa Wong',
+  '+63 912 345 1004',
+  'Maintenance Service',
+  (NOW() - INTERVAL '1 day'::timestamp)::timestamp,
+  (NOW() - INTERVAL '1 day'::timestamp + INTERVAL '3 hours'::timestamp)::timestamp,
+  '13:00',
+  '15:00',
+  'checked_out',
+  'Nissan - MNP 321',
+  (NOW() - INTERVAL '1 day'::timestamp + INTERVAL '10 minutes'::timestamp)::timestamp,
+  (NOW() - INTERVAL '1 day'::timestamp + INTERVAL '3 hours'::timestamp)::timestamp,
+  (NOW() - INTERVAL '1 day'::timestamp + INTERVAL '10 minutes'::timestamp)::timestamp,
+  (NOW() - INTERVAL '1 day'::timestamp + INTERVAL '3 hours'::timestamp)::timestamp,
+  NOW()::timestamp,
+  NOW()::timestamp
+) ON CONFLICT (id) DO NOTHING;
+
+-- Guest 5: Cancelled guest for today (should appear when filtering includes cancelled)
+INSERT INTO guests (
+  id,
+  tenant_id,
+  household_id,
+  guest_name,
+  phone_number,
+  purpose,
+  visit_start,
+  visit_end,
+  status,
+  vehicle_info,
+  notes,
+  created_at,
+  updated_at
+) VALUES (
+  '99999999-9999-9999-9999-999999999995'::uuid,
+  '11111111-1111-1111-1111-111111111111'::uuid,
+  '88888888-8888-8888-8888-888888888882'::uuid,
+  'Robert Kim',
+  '+63 912 345 1005',
+  'Social Visit',
+  NOW()::timestamp,
+  NOW()::timestamp + INTERVAL '2 hours'::timestamp,
+  '15:00',
+  '17:00',
+  'cancelled',
+  NULL,
+  'Guest cancelled visit - family emergency',
+  NOW()::timestamp,
+  NOW()::timestamp
+) ON CONFLICT (id) DO NOTHING;
+

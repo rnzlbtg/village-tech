@@ -9,6 +9,7 @@ import '../../shared/theme/app_theme.dart';
 import '../../widgets/shared/loading_indicator.dart';
 import '../../widgets/shared/error_display.dart';
 import '../rfid_scanning/manual_verification_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 
 /// RFID scanning state
 enum RfidScanState {
@@ -268,9 +269,13 @@ class _RfidScanScreenState extends ConsumerState<RfidScanScreen>
         title: const Text('RFID Scanner'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => context.pop(),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         actions: [
           IconButton(
@@ -281,6 +286,7 @@ class _RfidScanScreenState extends ConsumerState<RfidScanScreen>
           ),
         ],
       ),
+      drawer: const AppDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),

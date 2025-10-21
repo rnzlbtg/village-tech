@@ -439,7 +439,7 @@ class _GuestCheckinScreenState extends ConsumerState<GuestCheckinScreen> {
   Widget _buildActionButtons() {
     return Column(
       children: [
-        if (_guest.isPending) ...[
+        if (_guest.isExpected) ...[
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -657,7 +657,7 @@ class _GuestCheckinScreenState extends ConsumerState<GuestCheckinScreen> {
 
   Color _getStatusColor(GuestStatus status) {
     switch (status) {
-      case GuestStatus.pending:
+      case GuestStatus.expected:
         return Colors.orange;
       case GuestStatus.checkedIn:
         return Colors.green;

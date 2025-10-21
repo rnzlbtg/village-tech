@@ -1,30 +1,32 @@
 
-class Environment {
-  static const String appName = String.fromEnvironment('APP_NAME', defaultValue: 'Sentinel');
-  static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
-  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-  static const String supabaseServiceRoleKey = String.fromEnvironment('SUPABASE_SERVICE_ROLE_KEY');
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-  static const String flutterEnv = String.fromEnvironment('FLUTTER_ENV', defaultValue: 'development');
-  static const String logLevel = String.fromEnvironment('LOG_LEVEL', defaultValue: 'debug');
+class Environment {
+  static String get appName => dotenv.env['APP_NAME'] ?? 'Sentinel';
+  static String get appVersion => dotenv.env['APP_VERSION'] ?? '1.0.0';
+  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  static String get supabaseServiceRoleKey => dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+  static String get apiBaseUrl => dotenv.env['API_BASE_URL'] ?? '';
+
+  static String get flutterEnv => dotenv.env['FLUTTER_ENV'] ?? 'development';
+  static String get logLevel => dotenv.env['LOG_LEVEL'] ?? 'debug';
 
   // Feature flags
-  static const bool enableRfid = String.fromEnvironment('ENABLE_RFID', defaultValue: 'true') == 'true';
-  static const bool enableOfflineMode = String.fromEnvironment('ENABLE_OFFLINE_MODE', defaultValue: 'true') == 'true';
-  static const bool enablePushNotifications = String.fromEnvironment('ENABLE_PUSH_NOTIFICATIONS', defaultValue: 'true') == 'true';
-  static const bool enableBiometricAuth = String.fromEnvironment('ENABLE_BIOMETRIC_AUTH', defaultValue: 'true') == 'true';
-  static const bool enableBackgroundSync = String.fromEnvironment('ENABLE_BACKGROUND_SYNC', defaultValue: 'true') == 'true';
+  static bool get enableRfid => dotenv.env['ENABLE_RFID'] == 'true';
+  static bool get enableOfflineMode => dotenv.env['ENABLE_OFFLINE_MODE'] == 'true';
+  static bool get enablePushNotifications => dotenv.env['ENABLE_PUSH_NOTIFICATIONS'] == 'true';
+  static bool get enableBiometricAuth => dotenv.env['ENABLE_BIOMETRIC_AUTH'] == 'true';
+  static bool get enableBackgroundSync => dotenv.env['ENABLE_BACKGROUND_SYNC'] == 'true';
 
   // Debug settings
-  static const bool isDebug = String.fromEnvironment('DEBUG_MODE', defaultValue: 'true') == 'true';
-  static const bool enableLogging = String.fromEnvironment('ENABLE_LOGGING', defaultValue: 'true') == 'true';
+  static bool get isDebug => dotenv.env['DEBUG_MODE'] == 'true';
+  static bool get enableLogging => dotenv.env['ENABLE_LOGGING'] == 'true';
 
   // Development settings
-  static const bool useEmulator = String.fromEnvironment('DEV_USE_EMULATOR', defaultValue: 'false') == 'true';
-  static const bool skipEncryption = String.fromEnvironment('DEV_SKIP_ENCRYPTION', defaultValue: 'false') == 'true';
-  static const bool mockOfflineMode = String.fromEnvironment('DEV_MOCK_OFFLINE_MODE', defaultValue: 'false') == 'true';
+  static bool get useEmulator => dotenv.env['DEV_USE_EMULATOR'] == 'true';
+  static bool get skipEncryption => dotenv.env['DEV_SKIP_ENCRYPTION'] == 'true';
+  static bool get mockOfflineMode => dotenv.env['DEV_MOCK_OFFLINE_MODE'] == 'true';
 
   // Environment checks
   static bool get isDevelopment => flutterEnv == 'development';

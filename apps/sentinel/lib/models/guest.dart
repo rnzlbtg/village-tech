@@ -5,14 +5,26 @@ part 'guest.g.dart';
 
 /// Guest status enumeration
 enum GuestStatus {
-  @JsonValue('pending')
-  pending,
+  @JsonValue('scheduled')
+  expected,
   @JsonValue('checked_in')
   checkedIn,
   @JsonValue('checked_out')
   checkedOut,
   @JsonValue('cancelled')
   cancelled,
+}
+
+/// Verification status enumeration
+enum VerificationStatus {
+  @JsonValue('pending')
+  pending,
+  @JsonValue('verified')
+  verified,
+  @JsonValue('flagged')
+  flagged,
+  @JsonValue('blocked')
+  blocked,
 }
 
 /// Guest model for pre-registered visitor management
@@ -44,17 +56,10 @@ class Guest extends HiveObject {
   final String purpose;
 
   @HiveField(6)
-  @JsonKey(name: 'scheduled_date')
+  @JsonKey(name: 'visit_start')
   final DateTime scheduledDate;
 
-  @HiveField(7)
-  @JsonKey(name: 'expected_arrival')
-  final String expectedArrival; // TimeOfDay stored as string
-
-  @HiveField(8)
-  @JsonKey(name: 'expected_departure')
-  final String expectedDeparture; // TimeOfDay stored as string
-
+  
   @HiveField(9)
   @JsonKey(name: 'status')
   final GuestStatus status;
@@ -95,8 +100,6 @@ class Guest extends HiveObject {
     required this.phoneNumber,
     required this.purpose,
     required this.scheduledDate,
-    required this.expectedArrival,
-    required this.expectedDeparture,
     required this.status,
     this.vehicleInfo,
     this.notes,
@@ -122,8 +125,6 @@ class Guest extends HiveObject {
     String? phoneNumber,
     String? purpose,
     DateTime? scheduledDate,
-    String? expectedArrival,
-    String? expectedDeparture,
     GuestStatus? status,
     String? vehicleInfo,
     String? notes,
@@ -141,8 +142,6 @@ class Guest extends HiveObject {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       purpose: purpose ?? this.purpose,
       scheduledDate: scheduledDate ?? this.scheduledDate,
-      expectedArrival: expectedArrival ?? this.expectedArrival,
-      expectedDeparture: expectedDeparture ?? this.expectedDeparture,
       status: status ?? this.status,
       vehicleInfo: vehicleInfo ?? this.vehicleInfo,
       notes: notes ?? this.notes,
@@ -154,32 +153,15 @@ class Guest extends HiveObject {
     );
   }
 
-  /// Get expected arrival time as TimeOfDay
-  TimeOfDay get expectedArrivalTime {
-    final parts = expectedArrival.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
-  }
-
-  /// Get expected departure time as TimeOfDay
-  TimeOfDay get expectedDepartureTime {
-    final parts = expectedDeparture.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
-  }
-
+  
   /// Check if guest is currently checked in
   bool get isCheckedIn => status == GuestStatus.checkedIn;
 
   /// Check if guest has been checked out
   bool get isCheckedOut => status == GuestStatus.checkedOut;
 
-  /// Check if guest visit is still pending
-  bool get isPending => status == GuestStatus.pending;
+  /// Check if guest visit is still expected
+  bool get isExpected => status == GuestStatus.expected;
 
   /// Check if guest visit is cancelled
   bool get isCancelled => status == GuestStatus.cancelled;
@@ -195,34 +177,21 @@ class Guest extends HiveObject {
     return null;
   }
 
-  /// Check if guest is late for expected arrival
-  bool get isLate {
-    if (actualArrival != null) {
-      final now = DateTime.now();
-      final scheduledDateTime = DateTime(
-        scheduledDate.year,
-        scheduledDate.month,
-        scheduledDate.day,
-        expectedArrivalTime.hour,
-        expectedArrivalTime.minute,
-      );
-      return actualArrival!.isAfter(scheduledDateTime);
-    }
-    return false;
+  
+  /// Get expected arrival time as TimeOfDay
+  TimeOfDay get expectedArrivalTime {
+    return TimeOfDay(hour: 9, minute: 0); // Default time
   }
 
-  /// Check if guest is overdue for expected departure
-  bool get isOverdue {
-    if (isOnSite) {
-      final now = DateTime.now();
-      final scheduledDepartureDateTime = DateTime(
-        scheduledDate.year,
-        scheduledDate.month,
-        scheduledDate.day,
-        expectedDepartureTime.hour,
-        expectedDepartureTime.minute,
-      );
-      return now.isAfter(scheduledDepartureDateTime);
+  /// Get expected departure time as TimeOfDay
+  TimeOfDay get expectedDepartureTime {
+    return TimeOfDay(hour: 17, minute: 0); // Default time
+  }
+
+  /// Check if guest is late for expected arrival (simplified)
+  bool get isLate {
+    if (actualArrival != null && scheduledDate.isBefore(DateTime.now())) {
+      return true;
     }
     return false;
   }
@@ -233,6 +202,11 @@ class Guest extends HiveObject {
     return scheduledDate.year == now.year &&
            scheduledDate.month == now.month &&
            scheduledDate.day == now.day;
+  }
+
+  /// Check if guest is overdue (checked in past scheduled date)
+  bool get isOverdue {
+    return isCheckedIn && scheduledDate.isBefore(DateTime.now());
   }
 
   /// Check if guest registration is for future date
@@ -250,8 +224,8 @@ class Guest extends HiveObject {
   /// Get display status text
   String get statusDisplayText {
     switch (status) {
-      case GuestStatus.pending:
-        return 'Pending';
+      case GuestStatus.expected:
+        return 'Expected';
       case GuestStatus.checkedIn:
         return 'Checked In';
       case GuestStatus.checkedOut:
@@ -413,18 +387,16 @@ class GuestValidator {
 
   /// Check if guest should be auto-cancelled (no show)
   static bool shouldAutoCancel(Guest guest) {
-    if (guest.status != GuestStatus.pending) return false;
+    if (guest.status != GuestStatus.expected) return false;
 
     final now = DateTime.now();
     final scheduledDateTime = DateTime(
       guest.scheduledDate.year,
       guest.scheduledDate.month,
       guest.scheduledDate.day,
-      guest.expectedArrivalTime.hour,
-      guest.expectedArrivalTime.minute,
     );
 
-    // Auto-cancel if not arrived within 2 hours of expected time
-    return now.difference(scheduledDateTime).inHours > 2;
+    // Auto-cancel if guest visit date has passed and still not arrived
+    return now.isAfter(scheduledDateTime);
   }
 }

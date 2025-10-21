@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../utils/constants.dart';
+import '../../../core/providers/service_providers.dart' as providers;
+import '../../../core/providers/auth_provider.dart' as auth;
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
@@ -17,11 +20,18 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // TODO: Initialize Supabase, check authentication, etc.
+    // Wait for authentication state to be determined
     await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
-      context.go(AppRoutes.login); // TODO: Check auth and redirect accordingly
+      final authState = ref.read(providers.authStateProvider);
+
+      // Check authentication state and redirect accordingly
+      if (authState.status == auth.AuthStatus.authenticated) {
+        context.go(AppRoutes.dashboard);
+      } else {
+        context.go(AppRoutes.login);
+      }
     }
   }
 

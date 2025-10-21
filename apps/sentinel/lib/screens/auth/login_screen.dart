@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/router/app_router.dart';
+import '../../core/providers/service_providers.dart';
 import '../../shared/theme/app_theme.dart';
 import '../../utils/constants.dart';
 import '../../widgets/shared/loading_indicator.dart';
@@ -34,13 +34,62 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement actual login logic
-      await Future.delayed(const Duration(seconds: 2)); // Simulate API call
+      final authNotifier = ref.read(authStateProvider.notifier);
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
 
-      if (mounted) {
+      // Log sign-in attempt
+      debugPrint('🔐 SIGN IN ATTEMPT - Email: $email');
+      debugPrint('🔐 SIGN IN ATTEMPT - Timestamp: ${DateTime.now().toIso8601String()}');
+
+      final success = await authNotifier.signIn(
+        email: email,
+        password: password,
+      );
+
+      if (success && mounted) {
+        // Log successful authentication
+        debugPrint('✅ SIGN IN SUCCESS - Email: $email');
+        debugPrint('✅ SIGN IN SUCCESS - Timestamp: ${DateTime.now().toIso8601String()}');
+
+        // Get auth state for additional logging
+        final authState = ref.read(authStateProvider);
+        if (authState.guard != null) {
+          debugPrint('✅ GUARD PROFILE LOADED - Name: ${authState.guard!.fullName}');
+          debugPrint('✅ GUARD PROFILE LOADED - Role: ${authState.guard!.role}');
+          debugPrint('✅ GUARD PROFILE LOADED - Tenant ID: ${authState.tenantId}');
+        }
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to dashboard
         context.go(AppRoutes.dashboard);
+      } else if (mounted) {
+        // Log authentication failure
+        final authState = ref.read(authStateProvider);
+        debugPrint('❌ SIGN IN FAILED - Email: $email');
+        debugPrint('❌ SIGN IN FAILED - Error: ${authState.error ?? 'Unknown error'}');
+        debugPrint('❌ SIGN IN FAILED - Timestamp: ${DateTime.now().toIso8601String()}');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authState.error ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
+      // Log exception during authentication
+      debugPrint('💥 SIGN IN EXCEPTION - Email: ${_emailController.text.trim()}');
+      debugPrint('💥 SIGN IN EXCEPTION - Error: $e');
+      debugPrint('💥 SIGN IN EXCEPTION - Timestamp: ${DateTime.now().toIso8601String()}');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -52,6 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+        debugPrint('🔄 SIGN IN PROCESS COMPLETED - Loading state reset');
       }
     }
   }
