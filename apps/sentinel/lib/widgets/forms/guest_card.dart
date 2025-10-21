@@ -89,7 +89,7 @@ class GuestCard extends StatelessWidget {
               _buildDetailRow('Phone', guest.phoneNumber, Icons.phone),
               _buildDetailRow('Purpose', guest.purpose, Icons.info),
               _buildDetailRow('Scheduled',
-                '${_formatDate(guest.scheduledDate)} at ${guest.expectedArrival}',
+                _formatDate(guest.scheduledDate),
                 Icons.calendar_today,
               ),
 
@@ -108,20 +108,14 @@ class GuestCard extends StatelessWidget {
                   color: Colors.blue,
                 ),
 
-              if (guest.isOverdue && guest.isCheckedIn)
-                _buildDetailRow('Overdue',
-                  'Expected departure: ${guest.expectedDeparture}',
+              if (guest.isCheckedIn && guest.scheduledDate.isBefore(DateTime.now()))
+                _buildDetailRow('Visit Date Passed',
+                  'Scheduled date has passed',
                   Icons.warning,
                   color: Colors.orange,
                 ),
 
-              if (guest.isLate && guest.actualArrival != null)
-                _buildDetailRow('Late Arrival',
-                  'Expected: ${guest.expectedArrival}',
-                  Icons.schedule,
-                  color: Colors.red,
-                ),
-
+              
               // Vehicle info if available
               if (guest.vehicleInfo != null && guest.vehicleInfo!.isNotEmpty)
                 _buildDetailRow('Vehicle', guest.vehicleInfo!, Icons.directions_car),
@@ -253,7 +247,7 @@ class GuestCard extends StatelessWidget {
 
   Color _getStatusColor(GuestStatus status) {
     switch (status) {
-      case GuestStatus.pending:
+      case GuestStatus.expected:
         return Colors.orange;
       case GuestStatus.checkedIn:
         return Colors.green;
@@ -308,7 +302,7 @@ class CompactGuestCard extends StatelessWidget {
             Text(guest.phoneNumber),
             const SizedBox(height: 2),
             Text(
-              '${_formatDate(guest.scheduledDate)} at ${guest.expectedArrival}',
+              _formatDate(guest.scheduledDate),
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -337,7 +331,7 @@ class CompactGuestCard extends StatelessWidget {
 
   Color _getStatusColor(GuestStatus status) {
     switch (status) {
-      case GuestStatus.pending:
+      case GuestStatus.expected:
         return Colors.orange;
       case GuestStatus.checkedIn:
         return Colors.green;

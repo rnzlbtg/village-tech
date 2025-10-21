@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS entry_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE NOT NULL,
-  guard_id UUID REFERENCES guards(id) ON DELETE SET NULL NOT NULL,
+  guard_id UUID REFERENCES user_profiles(id) ON DELETE SET NULL NOT NULL,
   entry_type TEXT NOT NULL CHECK (entry_type IN ('resident', 'guest', 'delivery', 'construction', 'other')),
   person_name TEXT NOT NULL,
   vehicle_info TEXT,

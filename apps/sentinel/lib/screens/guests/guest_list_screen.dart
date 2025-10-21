@@ -7,6 +7,7 @@ import '../../shared/theme/app_theme.dart';
 import '../../widgets/shared/error_display.dart';
 import '../../widgets/forms/guest_card.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../../services/supabase_guest_service.dart';
 
 /// Guest List Screen - Displays today's guests with search and filtering
 class GuestListScreen extends ConsumerStatefulWidget {
@@ -25,9 +26,11 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
   @override
   void initState() {
     super.initState();
+    print('🔍 DEBUG: GuestListScreen - initState() called');
     _searchController.addListener(_onSearchChanged);
     // Load today's guests on initialization
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('🔍 DEBUG: GuestListScreen - Calling loadTodayGuests()');
       ref.read(guestProvider.notifier).loadTodayGuests();
     });
   }
@@ -65,9 +68,17 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
+              print('🔍 DEBUG: GuestListScreen - Refresh button pressed');
               ref.read(guestProvider.notifier).refreshGuests();
             },
             tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () {
+              _debugAccess();
+            },
+            tooltip: 'Debug Access',
           ),
         ],
       ),
@@ -187,7 +198,7 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
           children: [
             _buildStatusChip(null, 'All'),
             const SizedBox(width: 8),
-            _buildStatusChip(GuestStatus.pending, 'Pending'),
+            _buildStatusChip(GuestStatus.expected, 'Expected'),
             const SizedBox(width: 8),
             _buildStatusChip(GuestStatus.checkedIn, 'Checked In'),
             const SizedBox(width: 8),
@@ -220,6 +231,12 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
   }
 
   Widget _buildGuestList(GuestState guestState) {
+    print('🔍 DEBUG: GuestListScreen - _buildGuestList called');
+    print('   Is loading: ${guestState.isLoading}');
+    print('   Has error: ${guestState.error != null}');
+    print('   Total guests: ${guestState.guests.length}');
+    print('   Last updated: ${guestState.lastUpdated}');
+
     if (guestState.isLoading) {
       return const Center(
         child: Column(
@@ -234,6 +251,7 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
     }
 
     if (guestState.error != null) {
+      print('🔍 DEBUG: GuestListScreen - Error state: ${guestState.error}');
       return Center(
         child: ErrorDisplay(
           error: guestState.error!,
@@ -245,6 +263,7 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
     }
 
     final filteredGuests = _filterGuests(guestState.guests);
+    print('🔍 DEBUG: GuestListScreen - Filtered guests: ${filteredGuests.length}');
 
     if (filteredGuests.isEmpty) {
       return _buildEmptyState();
@@ -255,19 +274,11 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
         await ref.read(guestProvider.notifier).refreshGuests();
       },
       child: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         itemCount: filteredGuests.length,
         itemBuilder: (context, index) {
           final guest = filteredGuests[index];
-          return GuestCard(
-            guest: guest,
-            onTap: () {
-              _showGuestDetails(guest);
-            },
-            onCheckIn: guest.isPending ? () => _checkInGuest(guest) : null,
-            onCheckOut: guest.isCheckedIn ? () => _checkOutGuest(guest) : null,
-            onCancel: guest.isPending ? () => _cancelGuest(guest) : null,
-          );
+          return _buildCompactGuestCard(guest);
         },
       ),
     );
@@ -295,12 +306,9 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
       filtered = filtered.where((guest) => guest.isForToday).toList();
     }
 
-    // Sort by scheduled date and time
+    // Sort by scheduled date
     filtered.sort((a, b) {
-      final dateComparison = a.scheduledDate.compareTo(b.scheduledDate);
-      if (dateComparison != 0) return dateComparison;
-
-      return a.expectedArrivalTime.hour.compareTo(b.expectedArrivalTime.hour);
+      return a.scheduledDate.compareTo(b.scheduledDate);
     });
 
     return filtered;
@@ -362,50 +370,70 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _buildGuestDetailsSheet(guest),
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildCompactGuestDetailsSheet(guest),
     );
   }
 
-  Widget _buildGuestDetailsSheet(Guest guest) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.9,
-      builder: (context, scrollController) {
-        return Container(
-          padding: const EdgeInsets.all(20),
+  Widget _buildCompactGuestDetailsSheet(Guest guest) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+              // Header with close button
+              Row(
+                children: [
+                  const SizedBox(width: 40),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: 32,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Guest info
+              // Guest info header
               Row(
                 children: [
                   CircleAvatar(
-                    radius: 30,
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    radius: 25,
+                    backgroundColor: _getStatusColor(guest.status).withOpacity(0.1),
                     child: Icon(
                       Icons.person,
-                      size: 30,
-                      color: AppTheme.primaryColor,
+                      size: 25,
+                      color: _getStatusColor(guest.status),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,15 +441,28 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
                         Text(
                           guest.guestName,
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                        Text(
-                          guest.statusDisplayText,
-                          style: TextStyle(
-                            color: _getStatusColor(guest.status),
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(guest.status).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            guest.statusDisplayText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: _getStatusColor(guest.status),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -429,40 +470,31 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    _buildDetailRow('Phone', guest.phoneNumber, Icons.phone),
-                    _buildDetailRow('Purpose', guest.purpose, Icons.info),
-                    _buildDetailRow('Scheduled Date',
-                        _formatDate(guest.scheduledDate), Icons.calendar_today),
-                    _buildDetailRow('Expected Arrival',
-                        guest.expectedArrival, Icons.access_time),
-                    _buildDetailRow('Expected Departure',
-                        guest.expectedDeparture, Icons.access_time),
-                    if (guest.vehicleInfo != null)
-                      _buildDetailRow('Vehicle', guest.vehicleInfo!, Icons.directions_car),
-                    if (guest.notes != null)
-                      _buildDetailRow('Notes', guest.notes!, Icons.note),
-                    if (guest.actualArrival != null)
-                      _buildDetailRow('Actual Arrival',
-                          _formatDateTime(guest.actualArrival!), Icons.login),
-                    if (guest.actualDeparture != null)
-                      _buildDetailRow('Actual Departure',
-                          _formatDateTime(guest.actualDeparture!), Icons.logout),
-                  ],
-                ),
-              ),
+              // Details section
+              _buildDetailRow('Phone', guest.phoneNumber, Icons.phone),
+              _buildDetailRow('Purpose', guest.purpose, Icons.info),
+              _buildDetailRow('Scheduled Date', _formatDate(guest.scheduledDate), Icons.calendar_today),
+              if (guest.vehicleInfo != null)
+                _buildDetailRow('Vehicle', guest.vehicleInfo!, Icons.directions_car),
+              if (guest.notes != null)
+                _buildDetailRow('Notes', guest.notes!, Icons.note),
+              if (guest.actualArrival != null)
+                _buildDetailRow('Actual Arrival', _formatDateTime(guest.actualArrival!), Icons.login),
+              if (guest.actualDeparture != null)
+                _buildDetailRow('Actual Departure', _formatDateTime(guest.actualDeparture!), Icons.logout),
+
+              const SizedBox(height: 16),
 
               // Action buttons
-              _buildActionButtons(guest),
+              _buildCompactActionButtons(guest),
+
+              const SizedBox(height: 16),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -494,68 +526,83 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
     );
   }
 
-  Widget _buildActionButtons(Guest guest) {
+  Widget _buildCompactActionButtons(Guest guest) {
     return Column(
       children: [
-        if (guest.isPending) ...[
+        if (guest.isExpected) ...[
+          // Check In button
           SizedBox(
             width: double.infinity,
+            height: 44,
             child: ElevatedButton.icon(
               onPressed: () => _checkInGuest(guest),
-              icon: const Icon(Icons.login),
-              label: const Text('Check In Guest'),
+              icon: const Icon(Icons.login, size: 18),
+              label: const Text('Check In'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-        ],
-
-        if (guest.isCheckedIn) ...[
+          // Cancel button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _checkOutGuest(guest),
-              icon: const Icon(Icons.logout),
-              label: const Text('Check Out Guest'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-
-        if (guest.isPending) ...[
-          SizedBox(
-            width: double.infinity,
+            height: 44,
             child: OutlinedButton.icon(
               onPressed: () => _cancelGuest(guest),
-              icon: const Icon(Icons.cancel),
-              label: const Text('Cancel Registration'),
+              icon: const Icon(Icons.cancel_outlined, size: 18),
+              label: const Text('Cancel'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
         ],
 
-        // Close button
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+        if (guest.isCheckedIn) ...[
+          // Check Out button
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: () => _checkOutGuest(guest),
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('Check Out'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
+
+        if (guest.isCheckedOut || guest.isCancelled) ...[
+          // Close button for completed guests
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -654,7 +701,7 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
 
   Color _getStatusColor(GuestStatus status) {
     switch (status) {
-      case GuestStatus.pending:
+      case GuestStatus.expected:
         return Colors.orange;
       case GuestStatus.checkedIn:
         return Colors.green;
@@ -671,5 +718,318 @@ class _GuestListScreenState extends ConsumerState<GuestListScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// Debug user access and show detailed information
+  Future<void> _debugAccess() async {
+    try {
+      final guestService = ref.read(supabaseGuestServiceProvider);
+      final debugInfo = await guestService.debugUserAccess();
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Debug User Access'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (debugInfo.containsKey('error')) ...[
+                    Text('Error: ${debugInfo['error']}',
+                         style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                  ],
+                  if (debugInfo.containsKey('userId')) ...[
+                    Text('User ID: ${debugInfo['userId']}'),
+                    Text('Email: ${debugInfo['email']}'),
+                    Text('Tenant ID: ${debugInfo['tenantId']}'),
+                    const SizedBox(height: 16),
+                  ],
+                  if (debugInfo.containsKey('directTableAccess')) ...[
+                    const Text('Direct Table Access:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Success: ${debugInfo['directTableAccess']['success']}'),
+                    Text('Count: ${debugInfo['directTableAccess']['count']}'),
+                    if (debugInfo['directTableAccess']['error'] != null)
+                      Text('Error: ${debugInfo['directTableAccess']['error']}',
+                           style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 8),
+                    if (debugInfo['directTableAccess']['data'].isNotEmpty)
+                      for (var item in debugInfo['directTableAccess']['data'])
+                        Text('  - ${item['guest_name']} (tenant: ${item['tenant_id']})'),
+                    const SizedBox(height: 16),
+                  ],
+                  if (debugInfo.containsKey('viewAccess')) ...[
+                    const Text('View Access:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Success: ${debugInfo['viewAccess']['success']}'),
+                    Text('Count: ${debugInfo['viewAccess']['count']}'),
+                    if (debugInfo['viewAccess']['error'] != null)
+                      Text('Error: ${debugInfo['viewAccess']['error']}',
+                           style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 8),
+                    if (debugInfo['viewAccess']['data'].isNotEmpty)
+                      for (var item in debugInfo['viewAccess']['data'])
+                        Text('  - ${item['guest_name']} (tenant: ${item['tenant_id']})'),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Debug failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Build compact guest card widget
+  Widget _buildCompactGuestCard(Guest guest) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: InkWell(
+        onTap: () => _showGuestDetails(guest),
+        borderRadius: BorderRadius.circular(12.0),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Main guest info row
+              Row(
+                children: [
+                  // Guest avatar
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(guest.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      size: 20,
+                      color: _getStatusColor(guest.status),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Guest name and status
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          guest.guestName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getStatusColor(guest.status).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                guest.statusDisplayText,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _getStatusColor(guest.status),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _formatTime(guest.scheduledDate),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Quick action button
+                  _buildQuickActionButton(guest),
+                ],
+              ),
+              // Purpose and phone info
+              if (guest.purpose.isNotEmpty || guest.phoneNumber.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    if (guest.purpose.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                guest.purpose,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (guest.phoneNumber.isNotEmpty)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 14,
+                            color: Colors.grey[500],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              guest.phoneNumber,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build quick action button for guest card
+  Widget _buildQuickActionButton(Guest guest) {
+    if (guest.isExpected) {
+      return InkWell(
+        onTap: () => _checkInGuest(guest),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.green,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.login,
+                size: 14,
+                color: Colors.white,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'Check In',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (guest.isCheckedIn) {
+      return InkWell(
+        onTap: () => _checkOutGuest(guest),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.orange,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.logout,
+                size: 14,
+                color: Colors.white,
+              ),
+              SizedBox(width: 4),
+              Text(
+                'Check Out',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          guest.statusDisplayText,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Format time for display
+  String _formatTime(DateTime dateTime) {
+    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

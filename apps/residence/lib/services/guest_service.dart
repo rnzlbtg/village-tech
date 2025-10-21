@@ -37,6 +37,11 @@ class GuestService {
         return ApiResult.failure('Household ID not found');
       }
 
+      final tenantId = SupabaseService.instance.tenantId;
+      if (tenantId == null) {
+        return ApiResult.failure('Tenant ID not found');
+      }
+
       // Validation
       if (visitStart.isAfter(visitEnd)) {
         return ApiResult.failure('Visit start must be before visit end');
@@ -54,6 +59,7 @@ class GuestService {
       }
 
       final data = await _supabase.from('guests').insert({
+        'tenant_id': tenantId,
         'household_id': householdId,
         'guest_name': guestName,
         'contact_number': contactNumber,

@@ -13,9 +13,7 @@ Guest _$GuestFromJson(Map<String, dynamic> json) => Guest(
   guestName: json['guest_name'] as String,
   phoneNumber: json['phone_number'] as String,
   purpose: json['purpose'] as String,
-  scheduledDate: DateTime.parse(json['scheduled_date'] as String),
-  expectedArrival: json['expected_arrival'] as String,
-  expectedDeparture: json['expected_departure'] as String,
+  scheduledDate: DateTime.parse(json['visit_start'] as String),
   status: $enumDecode(_$GuestStatusEnumMap, json['status']),
   vehicleInfo: json['vehicle_info'] as String?,
   notes: json['notes'] as String?,
@@ -37,9 +35,7 @@ Map<String, dynamic> _$GuestToJson(Guest instance) => <String, dynamic>{
   'guest_name': instance.guestName,
   'phone_number': instance.phoneNumber,
   'purpose': instance.purpose,
-  'scheduled_date': instance.scheduledDate.toIso8601String(),
-  'expected_arrival': instance.expectedArrival,
-  'expected_departure': instance.expectedDeparture,
+  'visit_start': instance.scheduledDate.toIso8601String(),
   'status': _$GuestStatusEnumMap[instance.status]!,
   'vehicle_info': instance.vehicleInfo,
   'notes': instance.notes,
@@ -51,7 +47,7 @@ Map<String, dynamic> _$GuestToJson(Guest instance) => <String, dynamic>{
 };
 
 const _$GuestStatusEnumMap = {
-  GuestStatus.pending: 'pending',
+  GuestStatus.expected: 'scheduled',
   GuestStatus.checkedIn: 'checked_in',
   GuestStatus.checkedOut: 'checked_out',
   GuestStatus.cancelled: 'cancelled',
