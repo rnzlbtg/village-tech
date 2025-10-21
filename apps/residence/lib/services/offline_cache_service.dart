@@ -77,7 +77,16 @@ class OfflineCacheService {
   /// Get cached sticker allocation
   Map<String, dynamic>? getCachedStickerAllocation() {
     final box = Hive.box(stickerBox);
-    return box.get('allocation') as Map<String, dynamic>?;
+    final data = box.get('allocation');
+    if (data == null) return null;
+    // Handle different data types that Hive might return
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    return null;
   }
 
   /// Get sticker allocation cache timestamp

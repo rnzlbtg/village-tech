@@ -125,7 +125,7 @@ CREATE POLICY "Users can view guests for their tenant only" ON guests
     FOR SELECT USING (
         tenant_id = COALESCE(
             (auth.jwt() ->> 'tenant_id')::uuid,
-            (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+            (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
         )
     );
 
@@ -133,7 +133,7 @@ CREATE POLICY "Users can insert guests for their tenant only" ON guests
     FOR INSERT WITH CHECK (
         tenant_id = COALESCE(
             (auth.jwt() ->> 'tenant_id')::uuid,
-            (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+            (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
         )
     );
 
@@ -141,7 +141,7 @@ CREATE POLICY "Users can update guests for their tenant only" ON guests
     FOR UPDATE USING (
         tenant_id = COALESCE(
             (auth.jwt() ->> 'tenant_id')::uuid,
-            (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+            (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
         )
     );
 
@@ -149,7 +149,7 @@ CREATE POLICY "Users can delete guests for their tenant only" ON guests
     FOR DELETE USING (
         tenant_id = COALESCE(
             (auth.jwt() ->> 'tenant_id')::uuid,
-            (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+            (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
         )
         AND (
             -- Allow deletion for admins
@@ -159,7 +159,7 @@ CREATE POLICY "Users can delete guests for their tenant only" ON guests
                 AND ur.role IN ('admin', 'super_admin')
                 AND ur.tenant_id = COALESCE(
                     (auth.jwt() ->> 'tenant_id')::uuid,
-                    (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+                    (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
                 )
             )
             -- Or household heads for their own guests
@@ -185,7 +185,7 @@ LEFT JOIN properties p ON ru.property_id = p.id
 JOIN tenants t ON g.tenant_id = t.id
 WHERE g.tenant_id = COALESCE(
     (auth.jwt() ->> 'tenant_id')::uuid,
-    (auth.jwt() ->> 'app_metadata' ->> 'tenant_id')::uuid
+    (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
 )
 ORDER BY g.visit_start DESC;
 

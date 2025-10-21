@@ -102,9 +102,6 @@ export default async function PermitsPage({
         />
       </div>
 
-      {/* API Test Component */}
-      <PermitApiTest />
-
       {/* Permits Table */}
       <div className="bg-white rounded-lg shadow">
         <div className="overflow-x-auto">

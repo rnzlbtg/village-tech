@@ -24,6 +24,8 @@ import 'screens/settings/settings_screen.dart';
 import 'screens/settings/profile_screen.dart';
 import 'screens/announcements/announcements_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/rules/village_rules_screen.dart';
+import 'screens/messages/messages_list_screen.dart';
 import 'services/notification_service.dart';
 
 /// Main app widget with routing
@@ -395,29 +397,4 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 
-class MessagesListScreen extends StatelessWidget {
-  const MessagesListScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Messages - To be implemented in Phase 8'),
-      ),
-    );
-  }
-}
-
-class VillageRulesScreen extends StatelessWidget {
-  const VillageRulesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Village Rules - To be implemented in Phase 8'),
-      ),
-    );
-  }
-}
 
