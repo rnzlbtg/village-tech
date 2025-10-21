@@ -3,7 +3,18 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Building2, Settings, DoorOpen, Users, Pencil, Eye, X, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  Building2,
+  Settings,
+  DoorOpen,
+  Users,
+  Pencil,
+  Eye,
+  X,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react'
 import { Tenant } from '@/lib/types/tenant'
 import { Gate } from '@/lib/types/gate'
 import { Property, PropertyWithCounts } from '@/lib/types/property'
@@ -11,7 +22,6 @@ import GateForm from '@/components/gates/GateForm'
 import AdminUserForm from '@/components/admin-users/AdminUserForm'
 import AssociationSettingsForm from '@/components/association-settings/AssociationSettingsForm'
 import PropertyForm from '@/components/properties/PropertyForm'
-import PropertyList from '@/components/properties/PropertyList'
 
 interface TenantDetailTabsProps {
   tenant: Tenant
@@ -22,9 +32,18 @@ interface TenantDetailTabsProps {
   associationSettings?: any
 }
 
-export default function TenantDetailTabs({ tenant, adminUsers, gates, properties, tenantId, associationSettings }: TenantDetailTabsProps) {
+export default function TenantDetailTabs({
+  tenant,
+  adminUsers,
+  gates,
+  properties,
+  tenantId,
+  associationSettings,
+}: TenantDetailTabsProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'details' | 'properties' | 'gates' | 'admin-users' | 'settings'>('details')
+  const [activeTab, setActiveTab] = useState<
+    'details' | 'properties' | 'gates' | 'admin-users' | 'settings'
+  >('details')
   const [isGateModalOpen, setIsGateModalOpen] = useState(false)
   const [editingGate, setEditingGate] = useState<Gate | null>(null)
   const [isAdminUserModalOpen, setIsAdminUserModalOpen] = useState(false)
@@ -263,10 +282,66 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, properties
                           <div className="text-sm text-gray-700">{property.address || '-'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-700 capitalize">{property.property_type || '-'}</div>
+                          <div className="text-sm text-gray-700 capitalize">
+                            {property.property_type || '-'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <div className="text-sm text-gray-700">{property.residence_units?.[0]?.count || 0}</div>
+                          <div className="text-sm text-gray-700">
+                            {property.residence_units?.[0]?.count || 0}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 border rounded-lg">
+                <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No properties yet</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Tenant administrators will create properties through the Admin Portal.
+                </p>
+              </div>
+            )}
+            {properties.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Property Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Units
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {properties.map((property: any) => (
+                      <tr key={property.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{property.name}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">{property.address || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-700 capitalize">
+                            {property.property_type || '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="text-sm text-gray-700">
+                            {property.residence_units?.[0]?.count || 0}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -458,10 +533,7 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, properties
               onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
             >
               <h2 className="text-lg font-semibold text-gray-800">Association Settings</h2>
-              <button
-                type="button"
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-              >
+              <button type="button" className="text-gray-500 hover:text-gray-700 transition-colors">
                 {isSettingsExpanded ? (
                   <ChevronUp className="h-5 w-5" />
                 ) : (
@@ -472,10 +544,7 @@ export default function TenantDetailTabs({ tenant, adminUsers, gates, properties
 
             {isSettingsExpanded && (
               <div className="border rounded-lg p-6 bg-gray-50">
-                <AssociationSettingsForm
-                  tenantId={tenantId}
-                  initialData={associationSettings}
-                />
+                <AssociationSettingsForm tenantId={tenantId} initialData={associationSettings} />
               </div>
             )}
           </div>
